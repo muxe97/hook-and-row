@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hook &amp; Row picture test</title>
+<style>
+body{font-family:system-ui,sans-serif;margin:0;padding:16px;background:#F5F2F6;color:#251E2B;font-size:16px}
+h1{font-size:22px;margin:0 0 8px}
+.row{display:grid;grid-template-columns:110px 1fr;gap:10px;align-items:center;background:#fff;border-radius:12px;padding:8px;margin:8px 0}
+.row img{width:110px;height:62px;object-fit:cover;background:#ddd;border-radius:8px;display:block}
+.box{position:relative;width:110px;height:62px;overflow:hidden;border-radius:8px;background:#ddd}
+.box img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ar{position:relative;width:110px;aspect-ratio:16/9;overflow:hidden;border-radius:8px;background:#ddd}
+.ar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+b.ok{color:#2E7A55} b.no{color:#B3261E}
+pre{white-space:pre-wrap;background:#fff;border-radius:12px;padding:10px;font-size:13px}
+button{min-height:48px;width:100%;border:0;border-radius:12px;background:#8A2F66;color:#fff;font:inherit;font-weight:700;margin-top:12px}
+</style></head><body>
+<h1>Picture test</h1>
+<p>Wait 10 seconds, then take a screenshot of this whole page and send it to Claude.</p>
+<div id="rows"></div>
+<pre id="info"></pre>
+<button id="reset">Reset the app (clears its saved copy, keeps your favourites)</button>
+<script>
+const T=[
+ ['YouTube picture','https://i.ytimg.com/vi/u9th5UXP6AY/mqdefault.jpg',''],
+ ['Shrunk site photo','https://wsrv.nl/?url='+encodeURIComponent('https://wilmade.com/wp-content/uploads/2022/11/Wow-chunky-vest-free-crochet-pattern-by-Wilmade-horizontal-banner.jpg')+'&w=400&h=400&fit=cover&output=jpg&q=75',''],
+ ['Original site photo','https://wilmade.com/wp-content/uploads/2022/11/Wow-chunky-vest-free-crochet-pattern-by-Wilmade-horizontal-banner.jpg',''],
+ ['YouTube, lazy','https://i.ytimg.com/vi/WpNoeouUD7g/mqdefault.jpg','lazy'],
+ ['YouTube, app layout','https://i.ytimg.com/vi/hJzjwJy_4Ks/mqdefault.jpg','box'],
+ ['YouTube, app layout 2','https://i.ytimg.com/vi/RRbO-t670Lw/mqdefault.jpg','ar'],
+];
+const rows=document.getElementById('rows'); const res={};
+T.forEach(([name,src,mode],i)=>{
+  const r=document.createElement('div'); r.className='row';
+  const img=new Image(); img.alt=''; if(mode==='lazy') img.loading='lazy';
+  let holder=img; if(mode==='box'||mode==='ar'){ holder=document.createElement('div'); holder.className=mode; holder.appendChild(img); }
+  const t=document.createElement('div'); t.innerHTML=name+': <b>waiting</b>';
+  const set=(ok,msg)=>{ t.innerHTML=name+': <b class="'+(ok?'ok':'no')+'">'+msg+'</b>'; res[name]=msg; };
+  img.onload=()=>set(img.naturalWidth>0,img.naturalWidth>0?'shows':'empty');
+  img.onerror=()=>set(false,'blocked / failed');
+  setTimeout(()=>{ if(!res[name]) set(false,'timed out'); },10000);
+  img.src=src; r.appendChild(holder); r.appendChild(t); rows.appendChild(r);
+});
+const info=document.getElementById('info');
+(async()=>{
+  const regs = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistrations() : [];
+  info.textContent = 'Browser: '+navigator.userAgent+'\nInstalled mode: '+(matchMedia('(display-mode: standalone)').matches||navigator.standalone?'yes':'no')+'\nService workers: '+regs.length+'\nOnline: '+navigator.onLine+'\nSupports aspect-ratio: '+CSS.supports('aspect-ratio','16/9');
+})();
+document.getElementById('reset').onclick=async()=>{
+  try{ for(const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); for(const k of await caches.keys()) await caches.delete(k); }catch(e){}
+  location.href='./?fresh='+Date.now();
+};
+</script>
+</body></html>
