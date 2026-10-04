@@ -373,6 +373,20 @@ input[type=date]{min-height:46px;border:2px solid var(--line);border-radius:12px
 .vframe{position:relative;aspect-ratio:16/9;width:100%;border-radius:14px;overflow:hidden;background:#000}
 .vframe iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 
+.vframe #ytp,.vframe iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.resume-note{font-weight:700;color:var(--accent)}
+.bwatch{gap:12px}
+.wrow{display:grid;grid-template-columns:132px minmax(0,1fr);gap:12px;align-items:center}
+.wthumb{position:relative;aspect-ratio:16/9;border:0;padding:0;border-radius:10px;overflow:hidden;background:var(--sunk)}
+.wthumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.wthumb .pb{position:absolute;inset:0;margin:auto;width:40px;height:40px;border-radius:999px;background:rgba(0,0,0,.6);display:grid;place-items:center}
+.wthumb .pb svg{width:16px;height:16px;color:#fff;margin-left:2px}
+.wtxt{display:flex;flex-direction:column;gap:4px;min-width:0}
+.wtxt .eyebrow{margin:0}
+.wbar{display:block;height:6px;border-radius:999px;background:var(--sunk);overflow:hidden;margin-top:4px}
+.wbar i{display:block;height:100%;background:var(--accent);border-radius:999px}
+.bwatch .btn svg{width:18px;height:18px}
+
 </style>
 
 <div class="app" id="app"></div>
@@ -993,17 +1007,78 @@ const viewer = document.createElement('div');
 viewer.className='viewer'; viewer.hidden=true;
 viewer.innerHTML='<div class="vbar"><button class="vback" data-vclose="1" aria-label="Back">'+I.back+'<span>Back</span></button><b class="vtitle"></b><a class="vext" target="_blank" rel="noopener">Open in browser</a></div><div class="vbody"></div>';
 document.body.appendChild(viewer);
+/* ---------- watch progress (this phone only) ---------- */
+let watch = store.get('watch',{});   // {videoId:{t:seconds, d:duration, at:time, title}}
+const saveWatch = () => store.set('watch',watch);
+const mmss = s => { s=Math.floor(s||0); const h=Math.floor(s/3600), m=Math.floor(s%3600/60), x=String(s%60).padStart(2,'0'); return h? h+':'+String(m).padStart(2,'0')+':'+x : m+':'+x; };
+function unfinished(){ return Object.entries(watch).filter(([,w])=>w.t>=15 && !(w.d && w.t>=w.d-20)).sort((a,b)=>b[1].at-a[1].at); }
+let ytApi = null;
+function loadYT(){ if(ytApi) return ytApi; ytApi=new Promise((res,rej)=>{ if(window.YT&&YT.Player) return res(); const prev=window.onYouTubeIframeAPIReady; window.onYouTubeIframeAPIReady=()=>{ prev&&prev(); res(); }; const s=document.createElement('script'); s.src='https://www.youtube.com/iframe_api'; s.onerror=()=>{ ytApi=null; rej(); }; document.head.appendChild(s); setTimeout(()=>rej(),8000); }); return ytApi; }
+let player=null, poll=null, curVid=null;
+function record(final){
+  if(!player||!curVid||typeof player.getCurrentTime!=='function') return;
+  const t=player.getCurrentTime()||0, d=player.getDuration()||0;
+  if(d && t>=d-20){ delete watch[curVid]; saveWatch(); return; }      // finished: drop it
+  if(t<15 && !watch[curVid]) return;                                  // barely started: don't save
+  watch[curVid]={...(watch[curVid]||{}), t, d, at:Date.now()}; saveWatch();
+}
 function openViewer(url,title){
   const m = url.match(/youtube\.com\/watch\?v=([\w-]{11})/);
   const body = viewer.querySelector('.vbody');
-  viewer.querySelector('.vtitle').textContent = title||'';
   viewer.querySelector('.vext').href = url;
-  if(m){ body.className='vbody vvid'; body.innerHTML='<div class="vframe"><iframe src="https://www.youtube-nocookie.com/embed/'+m[1]+'?playsinline=1&rel=0&modestbranding=1" title="Video" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div><p class="fine">Tip: turn your phone sideways for a bigger picture.</p>'; }
-  else { body.className='vbody vpage'; body.innerHTML='<iframe src="'+url+'" title="Pattern"></iframe>'; }
+  if(m){
+    const id=m[1]; curVid=id;
+    const name=(VIDS[id]&&VIDS[id].title)||title||'Video';
+    viewer.querySelector('.vtitle').textContent = name;
+    const w=watch[id], start = w && !(w.d && w.t>=w.d-20) ? Math.max(0,Math.floor(w.t)-3) : 0;
+    if(w){ w.title=name; } else { watch[id]={t:0,d:0,at:Date.now(),title:name}; }
+    watch[id].at=Date.now(); saveWatch();
+    body.className='vbody vvid';
+    body.innerHTML='<div class="vframe"><div id="ytp"></div></div>'+(start?'<p class="resume-note">Picking up where you stopped: '+mmss(start)+'</p>':'')+'<p class="fine">Tip: turn your phone sideways for a bigger picture.</p>';
+    loadYT().then(()=>{
+      if(curVid!==id||viewer.hidden) return;
+      player=new YT.Player('ytp',{host:'https://www.youtube-nocookie.com',videoId:id,playerVars:{playsinline:1,rel:0,modestbranding:1,start},
+        events:{onStateChange:e=>{ if(e.data===0){ delete watch[id]; saveWatch(); } else if(e.data===2) record(); }}});
+      clearInterval(poll); poll=setInterval(()=>record(),5000);
+    }).catch(()=>{
+      if(curVid!==id) return;
+      const f=document.getElementById('ytp'); if(f) f.outerHTML='<iframe src="https://www.youtube-nocookie.com/embed/'+id+'?playsinline=1&rel=0&modestbranding=1&start='+start+'" title="Video" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>';
+    });
+  } else {
+    viewer.querySelector('.vtitle').textContent = title||'';
+    body.className='vbody vpage'; body.innerHTML='<iframe src="'+url+'" title="Pattern"></iframe>';
+  }
   viewer.hidden=false; document.body.style.overflow='hidden';
   history.pushState({viewer:1},'');
 }
-function closeViewer(){ viewer.hidden=true; viewer.querySelector('.vbody').innerHTML=''; document.body.style.overflow=''; }
+function closeViewer(){
+  record(true); clearInterval(poll); poll=null;
+  try{ player&&player.destroy(); }catch(e){} player=null; curVid=null;
+  viewer.hidden=true; viewer.querySelector('.vbody').innerHTML=''; document.body.style.overflow='';
+  render();
+}
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') record(); });
+
+/* Home: "Continue watching" tile */
+const _vHome = vHome;
+vHome = function(){
+  let h=_vHome(); const list=unfinished(); if(!list.length) return h;
+  const [id,w]=list[0], pct=w.d?Math.min(100,Math.round(w.t/w.d*100)):0;
+  const tile=`<div class="bt wide bwatch">
+    <div class="wrow"><button class="wthumb" data-resume="${id}" aria-label="Resume video">${'<img src="'+ytThumb(id)+'" alt="">'}<span class="pb">${I.play}</span></button>
+    <div class="wtxt"><p class="eyebrow">Continue watching</p><b class="bname2">${esc(w.title||'Video')}</b>
+    <span class="fine">Stopped at ${mmss(w.t)}${w.d?' of '+mmss(w.d):''}</span>
+    <span class="wbar" aria-hidden="true"><i style="width:${pct}%"></i></span></div></div>
+    <div class="pair"><button class="btn primary" data-resume="${id}">${I.play}Resume</button><button class="btn secondary" data-wdone="${id}">I've finished it</button></div>
+    ${list.length>1?`<span class="fine">${list.length-1} more video${list.length>2?'s':''} not finished. Open any of them and it carries on from where you stopped.</span>`:''}
+  </div>`;
+  const i=h.indexOf('<button class="bt wide brem');
+  return i>-1 ? h.slice(0,i)+tile+h.slice(i) : h+tile;
+};
+document.addEventListener('click', e=>{
+  const r=e.target.closest('[data-resume]'); if(r){ e.preventDefault(); e.stopPropagation(); const id=r.dataset.resume; openViewer('https://www.youtube.com/watch?v='+id, watch[id]&&watch[id].title); return; }
+  const d=e.target.closest('[data-wdone]'); if(d){ e.preventDefault(); e.stopPropagation(); delete watch[d.dataset.wdone]; saveWatch(); toast('Marked as watched'); render(); }
+}, true);
 window.addEventListener('popstate',()=>{ if(!viewer.hidden) closeViewer(); });
 document.addEventListener('click', e=>{
   if(e.target.closest('[data-vclose]')){ e.preventDefault(); history.back(); return; }
