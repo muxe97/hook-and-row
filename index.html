@@ -1,0 +1,964 @@
+<title>Hook &amp; Row</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#8A2F66">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Hook & Row">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: phone-first app shell — one column of content, fixed bottom tab bar, one main action per screen */
+:root{
+  --bg:#F5F2F6; --surface:#FFFFFF; --sunk:#ECE6EE; --line:#DCD3E0;
+  --ink:#251E2B; --muted:#6B6072;
+  --accent:#8A2F66; --accent-ink:#FFFFFF; --accent-soft:#F4E2EC;
+  --mustard:#B87C0E; --mustard-soft:#FBEFD6;
+  --ok:#2E7A55; --ok-soft:#DFF1E7;
+  --display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#18131C; --surface:#231C28; --sunk:#2D2533; --line:#3B3142;
+  --ink:#F2ECF4; --muted:#B4A8BB;
+  --accent:#E58BC0; --accent-ink:#2A0F20; --accent-soft:#3A2233;
+  --mustard:#E9B54F; --mustard-soft:#3A2E17;
+  --ok:#7FD3A6; --ok-soft:#1D3328; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#18131C; --surface:#231C28; --sunk:#2D2533; --line:#3B3142;
+  --ink:#F2ECF4; --muted:#B4A8BB;
+  --accent:#E58BC0; --accent-ink:#2A0F20; --accent-soft:#3A2233;
+  --mustard:#E9B54F; --mustard-soft:#3A2E17;
+  --ok:#7FD3A6; --ok-soft:#1D3328; color-scheme:dark }
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.5;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;cursor:pointer}
+a{color:var(--accent)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:8px}
+h1,h2,h3{font-family:var(--display);line-height:1.15;text-wrap:balance;margin:0}
+h1{font-size:30px;font-weight:800;letter-spacing:-.01em}
+h2{font-size:21px;font-weight:800}
+h3{font-size:18px;font-weight:600}
+p{margin:0}
+
+.app{max-width:640px;margin:0 auto;padding-inline:16px;padding-block:18px calc(96px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:22px}
+.top{display:flex;align-items:center;gap:10px;min-height:44px}
+.back{border:0;background:var(--sunk);border-radius:999px;padding:8px 16px 8px 12px;font-weight:700;display:inline-flex;align-items:center;gap:6px}
+.back svg{width:18px;height:18px}
+.lead{color:var(--muted)}
+.section{display:flex;flex-direction:column;gap:12px}
+.row-between{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.link-btn{border:0;background:none;color:var(--accent);font-weight:700;padding:4px 0}
+
+/* category picker */
+.cats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.cat{display:flex;align-items:center;gap:10px;padding:12px;border-radius:var(--r);border:2px solid var(--line);background:var(--surface);text-align:left;min-height:64px}
+.cat svg{width:30px;height:30px;flex:none;color:var(--muted)}
+.cat b{display:block;font-size:16px;line-height:1.2}
+.cat small{display:block;color:var(--muted);font-size:13px;line-height:1.3}
+.cat[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.cat[aria-pressed="true"] svg{color:var(--accent)}
+
+/* chips */
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;margin-inline:-16px;padding-inline:16px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:2px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 14px;font-weight:700;font-size:15px;white-space:nowrap}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.toggles{display:flex;flex-wrap:wrap;gap:8px}
+
+/* pattern cards */
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.card{display:flex;flex-direction:column;border:0;padding:0;background:var(--surface);border-radius:var(--r);overflow:hidden;text-align:left;box-shadow:0 1px 0 var(--line)}
+.swatch{aspect-ratio:4/3;max-width:100%;display:grid;place-items:center;position:relative;background:var(--sw);
+  background-image:radial-gradient(circle at 25% 30%,rgba(255,255,255,.22) 0 2px,transparent 3px),radial-gradient(circle at 75% 70%,rgba(255,255,255,.22) 0 2px,transparent 3px);
+  background-size:18px 18px}
+.swatch svg{width:46%;height:46%;color:rgba(255,255,255,.95)}
+.swatch .vid{position:absolute;left:8px;bottom:8px;background:rgba(0,0,0,.55);color:#fff;font-size:12px;font-weight:700;border-radius:999px;padding:3px 9px;display:flex;align-items:center;gap:4px}
+.swatch .vid svg{width:11px;height:11px}
+.card .body{padding:10px 12px 12px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.card .name{font-weight:700;line-height:1.25}
+.card .by{color:var(--muted);font-size:14px}
+.level{align-self:flex-start;font-size:12px;font-weight:700;border-radius:999px;padding:2px 8px;background:var(--sunk);color:var(--muted)}
+.level.beg{background:var(--ok-soft);color:var(--ok)}
+
+/* detail */
+.hero-swatch{border-radius:var(--r);aspect-ratio:16/8}
+.hero-swatch svg{width:28%;height:56%}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-size:14px;font-weight:700;border-radius:999px;padding:4px 10px;background:var(--sunk);color:var(--ink)}
+.tag.beg{background:var(--ok-soft);color:var(--ok)}
+.tag.warn{background:var(--mustard-soft);color:var(--mustard)}
+.how{background:var(--accent-soft);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.how b{font-family:var(--display);font-size:17px}
+.needs{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;background:var(--surface);border-radius:var(--r);padding:14px 16px;margin:0}
+.needs dt{color:var(--muted);font-weight:700;font-size:15px}
+.needs dd{margin:0;min-width:0}
+.actions{display:flex;flex-direction:column;gap:10px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;min-height:54px;border-radius:var(--r);font-weight:700;font-size:17px;text-decoration:none;border:2px solid transparent;padding:10px 16px;text-align:center}
+.btn svg{width:20px;height:20px;flex:none}
+.btn.primary{background:var(--accent);color:var(--accent-ink)}
+.btn.secondary{background:var(--surface);color:var(--ink);border-color:var(--line)}
+.btn.ghost{background:transparent;color:var(--accent);border-color:var(--accent)}
+.note{font-size:15px;color:var(--muted)}
+.fine{font-size:14px;color:var(--muted)}
+
+/* projects */
+.seg{display:grid;grid-template-columns:repeat(3,1fr);background:var(--sunk);border-radius:999px;padding:4px;gap:4px}
+.seg button{border:0;background:transparent;border-radius:999px;padding:9px 6px;font-weight:700;font-size:15px}
+.seg button[aria-pressed="true"]{background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.plist{display:flex;flex-direction:column;gap:10px}
+.pitem{display:flex;align-items:center;gap:12px;background:var(--surface);border:0;border-radius:var(--r);padding:10px;text-align:left;width:100%}
+.pitem .mini{width:58px;height:58px;border-radius:10px;flex:none;display:grid;place-items:center;background:var(--sw)}
+.pitem .mini svg{width:30px;height:30px;color:#fff}
+.pitem .mini img{width:100%;height:100%;object-fit:cover;border-radius:10px}
+.pitem .txt{min-width:0;flex:1}
+.pitem .txt b{display:block;line-height:1.25}
+.pitem .txt span{color:var(--muted);font-size:14px}
+.empty{background:var(--surface);border-radius:var(--r);padding:20px;text-align:center;color:var(--muted);display:flex;flex-direction:column;gap:10px;align-items:center}
+
+/* make mode */
+.counter{background:var(--surface);border-radius:20px;padding:20px 16px;display:flex;flex-direction:column;align-items:center;gap:12px}
+.counter .label{display:flex;gap:6px}
+.counter .label button{border:2px solid var(--line);background:transparent;border-radius:999px;padding:4px 14px;font-weight:700;font-size:15px}
+.counter .label button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.count{font-family:var(--display);font-size:96px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.plus{width:100%;min-height:84px;border:0;border-radius:18px;background:var(--accent);color:var(--accent-ink);font-family:var(--display);font-size:26px;font-weight:800}
+.plus:active{transform:scale(.98)}
+.counter .small{display:flex;gap:10px;width:100%}
+.counter .small button{flex:1;min-height:48px;border-radius:var(--r);border:2px solid var(--line);background:transparent;font-weight:700}
+.confirm{display:flex;flex-direction:column;gap:8px;width:100%;background:var(--mustard-soft);border-radius:var(--r);padding:12px}
+.confirm div{display:flex;gap:8px}
+.confirm button{flex:1;min-height:44px;border-radius:10px;border:0;font-weight:700}
+.confirm .yes{background:var(--mustard);color:var(--bg)}
+.confirm .no{background:var(--surface)}
+textarea{width:100%;min-height:110px;border:2px solid var(--line);border-radius:var(--r);background:var(--surface);color:var(--ink);font:inherit;padding:12px;resize:vertical}
+.photos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.photos figure{margin:0;position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--sunk)}
+.photos img{width:100%;height:100%;object-fit:cover}
+.photos .del{position:absolute;top:4px;right:4px;border:0;border-radius:999px;background:rgba(0,0,0,.6);color:#fff;width:30px;height:30px;font-weight:700}
+.addphoto{display:grid;place-items:center;aspect-ratio:1;border:2px dashed var(--line);border-radius:10px;color:var(--muted);font-weight:700;font-size:14px;text-align:center;padding:6px;cursor:pointer}
+.addphoto input{position:absolute;width:1px;height:1px;opacity:0}
+
+/* learn */
+.lessons{display:flex;flex-direction:column;gap:10px}
+details{background:var(--surface);border-radius:var(--r);padding:0 16px}
+summary{list-style:none;cursor:pointer;padding:14px 0;font-weight:700;display:flex;gap:12px;align-items:center}
+summary::-webkit-details-marker{display:none}
+summary .n{width:28px;height:28px;border-radius:999px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-size:14px;flex:none;font-variant-numeric:tabular-nums}
+summary::after{content:"+";margin-left:auto;font-size:22px;color:var(--muted)}
+details[open] summary::after{content:"–"}
+details .in{padding:0 0 16px 40px;display:flex;flex-direction:column;gap:10px}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-size:13px;text-transform:uppercase;letter-spacing:.05em}
+code,.mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:.92em;background:var(--sunk);border-radius:6px;padding:1px 6px}
+.decode{background:var(--surface);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px}
+.line{display:flex;flex-wrap:wrap;gap:4px;font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:15px}
+.line button{border:2px solid var(--line);background:var(--bg);border-radius:8px;padding:4px 7px}
+.line button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.explain{background:var(--accent-soft);border-radius:10px;padding:12px;min-height:72px}
+.stitch{display:flex;align-items:center;gap:12px;background:var(--surface);border-radius:var(--r);padding:12px 14px}
+.stitch .ab{font-family:var(--display);font-weight:800;font-size:18px;min-width:56px}
+.stitch .txt{flex:1;min-width:0}
+.stitch .txt span{display:block;color:var(--muted);font-size:14px}
+.stitch a{flex:none;display:flex;align-items:center;gap:4px;font-weight:700;text-decoration:none;border:2px solid var(--accent);border-radius:999px;padding:6px 12px;font-size:14px}
+.stitch a svg{width:12px;height:12px}
+
+/* tab bar */
+.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
+.tabs nav{max-width:640px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
+.tabs button{border:0;background:none;padding:10px 4px 12px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:13px;font-weight:700;color:var(--muted)}
+.tabs svg{width:24px;height:24px}
+.tabs button[aria-current="page"]{color:var(--accent)}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-weight:700;z-index:9;font-size:15px}
+input[type=search]{width:100%;min-height:48px;border:2px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink);font:inherit;padding:8px 18px}
+@media (min-width:560px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}.cats{grid-template-columns:repeat(4,minmax(0,1fr))}.cat{flex-direction:column;align-items:flex-start}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+/* sections added: tutorials, favourites, must make */
+.tabs nav{grid-template-columns:repeat(5,1fr)}
+.tabs button{font-size:12px;padding-inline:2px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pair .btn{min-height:50px;font-size:16px}
+.btn.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.vlist{display:flex;flex-direction:column;gap:10px}
+.vrow{display:grid;grid-template-columns:58px minmax(0,1fr);align-items:start;gap:12px;background:var(--surface);border-radius:var(--r);padding:12px}
+.vrow .right{min-width:0;display:flex;flex-direction:column;gap:10px}
+.vrow .mini{width:58px;height:58px;border-radius:10px;display:grid;place-items:center;background:var(--sw);position:relative}
+.vrow .mini svg{width:28px;height:28px;color:#fff}
+.vrow .mini .pl{position:absolute;right:-4px;bottom:-4px;width:24px;height:24px;border-radius:999px;background:var(--ink);color:var(--bg);display:grid;place-items:center}
+.vrow .mini .pl svg{width:11px;height:11px;color:var(--bg)}
+.vrow .txt{min-width:0;display:flex;flex-direction:column;gap:2px;text-align:left;border:0;background:none;padding:0}
+.vrow .txt b{line-height:1.25}
+.vrow .txt span{color:var(--muted);font-size:14px;line-height:1.3}
+.vrow .acts{display:flex;gap:8px;align-items:center}
+.icon-btn{width:44px;height:44px;border-radius:999px;border:2px solid var(--line);background:transparent;display:grid;place-items:center;color:var(--muted)}
+.icon-btn svg{width:20px;height:20px}
+.icon-btn.on{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
+.watch{display:flex;align-items:center;gap:5px;height:44px;padding:0 14px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font-weight:700;text-decoration:none;font-size:15px}
+.watch svg{width:12px;height:12px}
+.remind{background:var(--surface);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:10px;border:2px solid var(--mustard)}
+.remind h2{display:flex;align-items:center;gap:8px}
+.remind h2 svg{width:22px;height:22px;color:var(--mustard)}
+.mlist{display:flex;flex-direction:column;gap:12px}
+.mitem{background:var(--surface);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:12px}
+.mitem .headr{display:grid;grid-template-columns:58px minmax(0,1fr);gap:12px;align-items:center;text-align:left;border:0;background:none;padding:0;width:100%}
+.mitem .headr .mini{width:58px;height:58px;border-radius:10px;display:grid;place-items:center;background:var(--sw)}
+.mitem .headr .mini svg{width:30px;height:30px;color:#fff}
+.mitem .headr b{display:block;line-height:1.25;font-size:17px}
+.mitem .headr .sub{display:block;color:var(--muted);font-size:14px}
+.datebox{display:flex;flex-direction:column;gap:6px}
+.datebox label{font-weight:700;font-size:15px}
+.datebox .dr{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+input[type=date]{min-height:46px;border:2px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);font:inherit;padding:6px 10px;flex:1;min-width:0}
+.pill{font-size:13px;font-weight:700;border-radius:999px;padding:3px 10px;white-space:nowrap}
+.pill.due{background:var(--mustard);color:var(--bg)}
+.pill.soon{background:var(--mustard-soft);color:var(--mustard)}
+.pill.later{background:var(--sunk);color:var(--muted)}
+.mitem .pair .btn{min-height:46px;font-size:15px}
+.rlist{display:flex;flex-direction:column;gap:8px}
+.rline{display:flex;justify-content:space-between;align-items:center;gap:10px;border:0;background:var(--bg);border-radius:10px;padding:10px 12px;text-align:left;width:100%}
+.rline b{min-width:0}
+
+.chip,.seg button,.counter .label button,.link-btn,.line button{min-height:44px}
+.chip{display:inline-flex;align-items:center}
+.cat{min-height:72px}
+/* v3: overview home, combined patterns + videos, thumbnails */
+.tabs nav{grid-template-columns:repeat(4,1fr)}
+.tabs button{font-size:12.5px}
+.chip,.seg button,.counter .label button,.link-btn,.line button{min-height:44px}
+.chip{display:inline-flex;align-items:center;gap:6px}
+.thumb{position:relative;aspect-ratio:16/10;max-width:100%;overflow:hidden;background:var(--sw);display:grid;place-items:center}
+.thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.thumb > svg{width:42%;height:42%;color:rgba(255,255,255,.95)}
+.thumb .vid{position:absolute;left:8px;bottom:8px;background:rgba(0,0,0,.66);color:#fff;font-size:12px;font-weight:700;border-radius:999px;padding:3px 9px;display:flex;align-items:center;gap:4px;z-index:1}
+.thumb .vid svg{width:11px;height:11px}
+.card .thumb{border-radius:0}
+.hero-img{border-radius:var(--r);aspect-ratio:16/9}
+.mini{position:relative;overflow:hidden}
+.mini img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+/* video cards */
+.vcard{display:grid;grid-template-columns:132px minmax(0,1fr);gap:12px;align-items:center;background:var(--surface);border-radius:var(--r);padding:10px;text-decoration:none;color:var(--ink);border:2px solid var(--line)}
+.vcard.main{border-color:var(--accent)}
+.vcard .vt{position:relative;aspect-ratio:16/9;border-radius:10px;overflow:hidden;background:var(--sw)}
+.vcard .vt img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.vcard .vt .pb{position:absolute;inset:0;margin:auto;width:40px;height:40px;border-radius:999px;background:rgba(0,0,0,.6);display:grid;place-items:center}
+.vcard .vt .pb svg{width:16px;height:16px;color:#fff;margin-left:2px}
+.vcard b{display:block;line-height:1.25}
+.vcard span{color:var(--muted);font-size:14px}
+.vcard .open{color:var(--accent);font-weight:700;font-size:14px}
+/* overview */
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.stat{background:var(--surface);border:2px solid var(--line);border-radius:var(--r);padding:12px 14px;text-align:left;display:flex;align-items:center;gap:12px;min-height:68px}
+.stat b{font-family:var(--display);font-size:30px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;min-width:30px}
+.stat span{font-weight:700;line-height:1.2}
+.stat small{display:block;color:var(--muted);font-size:13px;font-weight:400}
+.cont{background:var(--surface);border-radius:18px;overflow:hidden;display:flex;flex-direction:column}
+.cont .thumb{aspect-ratio:16/8}
+.cont .in{padding:14px 16px 16px;display:flex;flex-direction:column;gap:10px}
+.cont .rowsdone{display:flex;align-items:baseline;gap:8px}
+.cont .rowsdone b{font-family:var(--display);font-size:40px;font-weight:800;line-height:1}
+.hscroll{display:grid;grid-auto-flow:column;grid-auto-columns:150px;gap:10px;overflow-x:auto;margin-inline:-16px;padding-inline:16px;padding-bottom:4px;scrollbar-width:none}
+.hscroll::-webkit-scrollbar{display:none}
+.learnrow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.learnbtn{background:var(--accent-soft);border:0;border-radius:var(--r);padding:14px;text-align:left;display:flex;flex-direction:column;gap:6px;min-height:84px;color:var(--ink)}
+.learnbtn svg{width:26px;height:26px;color:var(--accent)}
+.learnbtn b{font-size:16px;line-height:1.2}
+.cats .cat small{font-variant-numeric:tabular-nums}
+.filters{display:flex;flex-direction:column;gap:10px}
+.flabel{font-weight:700;font-size:15px}
+.sticky-count{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.chip svg{width:16px;height:16px;flex:none}
+.vcard .vt{display:block}
+.stat span{min-width:0}
+.hello{display:flex;flex-direction:column;gap:4px}
+.hello h1{font-size:32px}
+.eyebrow{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.startcard{background:var(--accent-soft)}
+.startcard .btn.secondary{background:var(--surface)}
+.statdue{border-color:var(--mustard)}
+.hscroll{grid-auto-columns:148px}
+.scard{display:flex;flex-direction:column;gap:6px;background:none;border:0;padding:0;text-align:left;color:var(--ink);text-decoration:none;min-width:0}
+.scard .thumb{border-radius:12px;aspect-ratio:1/1}
+.scard .thumb > svg{width:40%;height:40%}
+.scard .sname{font-weight:700;font-size:15px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tagp{position:absolute;left:8px;bottom:8px;z-index:1;background:rgba(0,0,0,.66);color:#fff;font-size:12px;font-weight:700;border-radius:999px;padding:3px 9px;display:flex;align-items:center;gap:4px}
+.tagp svg{width:11px;height:11px}
+.tagok{background:var(--ok);color:var(--surface)}
+.tagdue{background:var(--mustard);color:var(--surface)}
+.sempty .plusc{aspect-ratio:1/1;border-radius:12px;border:2px dashed var(--line);display:grid;place-items:center;font-size:34px;color:var(--muted);background:var(--surface)}
+.sempty .sname{color:var(--muted);font-weight:700}
+.cont .thumb{aspect-ratio:16/7}
+.colls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.coll{background:var(--surface);border:2px solid var(--line);border-radius:16px;padding:12px;text-align:left;display:flex;flex-direction:column;gap:10px;color:var(--ink);min-width:0}
+.coll .ct{display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+.coll .ct b{font-size:16px}
+.coll .cn{font-family:var(--display);font-weight:800;font-size:26px;line-height:1;font-variant-numeric:tabular-nums}
+.strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+.strip .cell{position:relative;aspect-ratio:1/1;border-radius:8px;overflow:hidden;background:var(--sw);display:grid;place-items:center}
+.strip .cell img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.strip .cell svg{width:60%;height:60%;color:#fff}
+.strip .blank{background:var(--sunk)}
+.colldue{border-color:var(--mustard)}
+.bento{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.bt{background:var(--surface);border:2px solid transparent;border-radius:18px;padding:14px;text-align:left;color:var(--ink);display:flex;flex-direction:column;justify-content:space-between;gap:6px;min-height:118px;min-width:0}
+.bt > b{font-size:16px}
+.bn{font-family:var(--display);font-weight:800;font-size:36px;line-height:1;font-variant-numeric:tabular-nums}
+.wide{grid-column:1/-1;min-height:0}
+.big{grid-column:1/-1;background:var(--accent);color:var(--accent-ink);padding:0;overflow:hidden;gap:0}
+.bimg{position:relative;height:150px;background:var(--sw);display:grid;place-items:center;overflow:hidden}
+.bimg img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.bimg > svg{width:56px;height:56px;color:rgba(255,255,255,.95)}
+.bin{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;padding:12px 14px}
+.bname{display:block;font-family:var(--display);font-size:22px;line-height:1.15}
+.bsub{display:block;font-size:15px;opacity:.92}
+.eyebrow.light{color:inherit;opacity:.85}
+.bgo{flex:none;min-height:48px;padding:0 18px;border:0;border-radius:12px;background:var(--surface);color:var(--accent);font-weight:700;font-size:16px}
+.bmore{display:flex;gap:8px;padding:0 14px 14px}
+.bmore a{flex:1;min-height:44px;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:12px;background:rgba(255,255,255,.16);color:inherit;text-decoration:none;font-weight:700;font-size:15px}
+.bmore a svg{width:16px;height:16px}
+.bstart{padding:4px 0}
+.brem{background:var(--mustard-soft);border-color:var(--mustard)}
+.brem.quiet{background:var(--surface);border-color:var(--line)}
+.brow{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.bname2{font-weight:700;font-size:17px;min-width:0}
+.bdue{border-color:var(--mustard)}
+.blearn{background:var(--accent-soft);gap:10px}
+.blearn .btn.secondary{background:var(--surface);min-height:48px;font-size:15px}
+.blearn .btn.secondary{padding:8px 10px;gap:6px;white-space:nowrap;font-size:14px}
+.blearn .btn svg{width:16px;height:16px}
+
+.viewer{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;flex-direction:column}
+.viewer[hidden]{display:none}
+.vbar{display:flex;align-items:center;gap:8px;padding:calc(env(safe-area-inset-top) + 6px) 10px 6px;background:var(--surface);border-bottom:1px solid var(--line)}
+.vback{display:flex;align-items:center;gap:4px;min-height:44px;min-width:44px;padding:0 10px;border:0;background:none;color:var(--accent);font:inherit;font-weight:700}
+.vback svg{width:20px;height:20px}
+.vtitle{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:15px}
+.vext{flex:none;min-height:44px;display:flex;align-items:center;padding:0 8px;color:var(--accent);font-weight:700;font-size:14px;text-decoration:none}
+.vbody{flex:1;min-height:0;display:flex;flex-direction:column}
+.vpage iframe{flex:1;width:100%;border:0;background:#fff}
+.vvid{padding:16px;gap:12px}
+.vframe{position:relative;aspect-ratio:16/9;width:100%;border-radius:14px;overflow:hidden;background:#000}
+.vframe iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+
+</style>
+
+<div class="app" id="app"></div>
+<div class="tabs"><nav id="tabs" aria-label="Main"></nav></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* ---------- icons ---------- */
+const I = {
+  tops:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M8 3c0 2 1.5 3.5 4 3.5S16 5 16 3l2 .6c-.3 2.4-.2 4.4 1 6.4L18 21H6L5 10c1.2-2 1.3-4 1-6.4z"/></svg>',
+  cardigans:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M9 3l3 9 3-9 4 2 2 9-3 1-1-4v10H6V11l-1 4-3-1 2-9z"/><path d="M12 12v9"/><circle cx="13.6" cy="15" r=".6" fill="currentColor"/><circle cx="13.6" cy="18" r=".6" fill="currentColor"/></svg>',
+  bags:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M4 9h16l-1.5 12h-13z"/><path d="M8.5 9V7a3.5 3.5 0 0 1 7 0v2"/><path d="M6 13h12M5.6 17h12.8" opacity=".5"/></svg>',
+  hats:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><circle cx="12" cy="4" r="1.8"/><path d="M4.5 17a7.5 7.5 0 0 1 15 0"/><rect x="3.5" y="17" width="17" height="3.5" rx="1"/><path d="M8 17v3.5M12 17v3.5M16 17v3.5" opacity=".5"/></svg>',
+  accessories:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="3.5"/><path d="M12 4.5c1.5 2 1.5 3 0 4M19.5 12c-2 1.5-3 1.5-4 0M12 19.5c-1.5-2-1.5-3 0-4M4.5 12c2-1.5 3-1.5 4 0" opacity=".6"/></svg>',
+  scarves:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M6 4c3 2 9 2 12 0l-1 5c-3 1.5-7 1.5-10 0z"/><path d="M14 9.6l1.5 10.4h-4L11 10"/><path d="M12 20v1.5M14 20v1.5M15.5 20v1.5" opacity=".6"/></svg>',
+  toys:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="6.5" r="2.5"/><circle cx="12" cy="13" r="7.5"/><circle cx="9.3" cy="12" r=".9" fill="currentColor"/><circle cx="14.7" cy="12" r=".9" fill="currentColor"/><path d="M10.5 15.5c1 .8 2 .8 3 0"/></svg>',
+  home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3.5" y="3.5" width="17" height="17" rx="1.5"/><rect x="7.5" y="7.5" width="9" height="9" rx="1"/><rect x="10.5" y="10.5" width="3" height="3"/></svg>',
+  play:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l12.5-7.5z"/></svg>',
+  page:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg>',
+  heart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7a4.3 4.3 0 0 1 7.5 2.8C19.5 15.4 12 20 12 20z"/></svg>',
+  heartf:'<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2"><path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7a4.3 4.3 0 0 1 7.5 2.8C19.5 15.4 12 20 12 20z"/></svg>',
+  back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 5l-7 7 7 7"/></svg>',
+  tHome:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/></svg>',
+  tBrowse:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>',
+  tProj:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M5 9c4 1 10 1 14 0M4.5 14c5 1.5 10 1.5 15 0M10 4.3c-2 4-2 11.4 0 15.4"/></svg>',
+  tLearn:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6c3-1.5 6-1.5 9 0v13c-3-1.5-6-1.5-9 0zM21 6c-3-1.5-6-1.5-9 0v13c3-1.5 6-1.5 9 0z"/></svg>',
+  ext:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6"/></svg>'
+};
+
+/* Every pattern is free. Details come from each designer's own page.
+   Every video id was checked against YouTube so the right video opens.
+   img = picture source used once at build time (video thumbnail or the page's own preview image). */
+const P = [
+ // ---------- TOPS ----------
+ {id:'chloe',cat:'tops',name:'Chloe Mesh Sleeves Top',by:'Heart Hook Home',url:'https://hearthookhome.com/the-chloe-free-mesh-sleeves-top-crochet-pattern/',level:null,video:'u9th5UXP6AY',access:'open',terms:'US',yarn:'Size 2 or 3 yarn',hook:'5 mm',size:'XS to 2XL',note:'Worked from the top down using treble crochet.'},
+ {id:'festival',cat:'tops',name:'Festival Tank Top',by:'Leelee Knits',url:'https://leeleeknits.com/free-tank-top-crochet-pattern/',level:'Easy',video:'WpNoeouUD7g',access:'open',terms:null,yarn:'DK (Paintbox Simply DK)',hook:'5 mm',size:'XS to 2XL',note:'Two flat panels sewn at the sides, then straps added.'},
+ {id:'avignon',cat:'tops',name:'Avignon Tee',by:'For The Frills',url:'https://forthefrills.com/crochet-beginner-top-free-pattern/',level:'Beginner',video:'hJzjwJy_4Ks',access:'open',terms:'US',yarn:'Sport, weight 2',hook:'4.5 mm',size:'XS to 5XL',note:'Made from 4 rectangles.'},
+ {id:'halter',cat:'tops',name:'Tie Back Halter Top',by:'Leelee Knits',url:'https://leeleeknits.com/tie-back-halter-top-crochet-pattern/',level:null,video:'RRbO-t670Lw',access:'open',terms:null,yarn:'DK (WeCrochet CotLin), 2 colours',hook:'4 mm',size:'XS to XXL',note:'Striped halter that ties at the back.'},
+ {id:'meshtop',cat:'tops',name:'Crochet Mesh Top',by:'Leelee Knits',url:'https://leeleeknits.com/crochet-mesh-top-pattern/',level:null,video:'G38asG_3T0g',access:'open',terms:null,yarn:'DK (Paintbox Cotton Mix DK)',hook:'3.75 mm',size:'XS to 2XL',note:'Two mesh panels seamed together.'},
+ {id:'scallop',cat:'tops',name:'Summer Scallop Tank Top',by:'Hayhay Crochet',url:'https://hayhaycrochet.com/crochet-patterns/tops/crochet-summer-scallop-tank-top/',level:'Easy',video:'jg1I5j8QErQ',access:'open',terms:'US',yarn:'DK / light worsted, weight 3',hook:'4 mm',size:'XS to 4XL',note:'Finished with a scallop edge.'},
+ {id:'shrug',cat:'tops',name:'Granny Shrug Bolero',by:'Hayhay Crochet',url:'https://hayhaycrochet.com/crochet-patterns/tops/crochet-shrug-bolero/',level:'Beginner',video:'9_PLPLiZ99s',access:'open',terms:'US',yarn:'Worsted / aran, weight 4',hook:'6 mm',size:'XS/S to 5XL',note:'Raglan granny sleeves.'},
+ {id:'poncho',cat:'tops',name:'Granny Stripe Poncho',by:'Hayhay Crochet',url:'https://hayhaycrochet.com/crochet-patterns/tops/crochet-granny-stripe-poncho/',level:null,video:'1dLqe9ezzgk',access:'open',terms:'US',yarn:'Medium, weight 4',hook:'6 mm',size:'One size fits most (about 64 cm long)',note:'Granny stripes worked to a point.'},
+
+ // ---------- SWEATERS & CARDIGANS ----------
+ {id:'vcardi',cat:'cardigans',name:'V-Stitch Cardi',by:'Wilmade',url:'https://wilmade.com/v-stitch-cardi/',level:'Beginner',video:'jiyJ0HuewWo',access:'open',terms:'US',yarn:'Light / DK, weight 3 (Lion Brand Coboo)',hook:'6 mm, 5 mm for cuffs',size:'S to 5X',note:'Only chains and double crochet.'},
+ {id:'firstcardi',cat:'cardigans',name:'My First Cardigan',by:'Wilmade',url:'https://wilmade.com/my-first-cardigan/',level:'Advanced beginner',video:'iriY_pjHGMM',access:'open',terms:'US',yarn:'Medium, weight 4 (Lion Brand Pound of Love)',hook:'6 mm',size:'S to 5XL',note:'For beginners ready for a next step.'},
+ {id:'leeleecardi',cat:'cardigans',name:'Short Sleeve Summer Cardigan',by:'Leelee Knits',url:'https://leeleeknits.com/short-sleeve-crochet-cardigan-pattern/',level:'Beginner',video:'5Y9TSGN4qC8',access:'open',terms:null,yarn:'Sport weight merino',hook:'3.75 mm',size:'XS/S/M to XXL/3XL',note:'Light summer layer.'},
+ {id:'hexcardi',cat:'cardigans',name:'Cropped Granny Hexagon Cardigan',by:'Hayhay Crochet',url:'https://hayhaycrochet.com/crochet-patterns/cardigans/classic-cropped-granny-hexagon-cardigan-free-pattern-video-tutorial/',level:null,video:'5Mju5nbNQEQ',access:'open',terms:'US',yarn:'Weight 3 (DROPS Cotton Merino)',hook:'4.5 mm',size:'XS/S, can be resized',note:'Made from granny hexagons.'},
+ {id:'boho',cat:'cardigans',name:'Tulip Square Boho Cardi',by:'Wilmade',url:'https://wilmade.com/tulip-square-boho-cardi/',level:null,video:'2rZOlkKp9po',access:'open',terms:null,yarn:'Light / DK, weight 3',hook:'6 mm, 5 mm for collar',size:'XS to 5XL',note:'Granny-square cardigan.'},
+ {id:'chunkyvest',cat:'cardigans',name:'Wow Chunky Vest',by:'Wilmade',url:'https://wilmade.com/wow-chunky-vest/',level:'Beginner',video:null,access:'open',terms:'US',yarn:'Super bulky, weight 6',hook:'10 mm',size:'XS to 5XL',note:'Quick, thick vest.'},
+ {id:'leeleevest',cat:'cardigans',name:'Crochet Vest',by:'Leelee Knits',url:'https://leeleeknits.com/crochet-vest-pattern/',level:'Easy',video:'UL8SBu_lsgU',access:'open',terms:null,yarn:'Worsted',hook:'4.5 mm',size:'XS to 2XL',note:'Sleeveless layer.'},
+ {id:'grannysweater',cat:'cardigans',name:'Cozy Granny Square Sweater',by:'Hayhay Crochet',url:'https://hayhaycrochet.com/crochet-patterns/sweaters/cozy-granny-square-sweater/',level:null,video:'KFR86z4vV-w',access:'open',terms:'US',yarn:'Varies by size',hook:'8 mm (S/M) or 6 mm (L/XL)',size:'S/M, L/XL',note:'Squares joined as you go.'},
+ {id:'mohair',cat:'cardigans',name:'Fluffy Mohair Sweater',by:'Hayhay Crochet',url:'https://hayhaycrochet.com/crochet-patterns/sweaters/easy-crochet-mohair-sweater/',level:null,video:'T_lkEX2xeCM',access:'open',terms:'US',yarn:'Any yarn (mohair shown)',hook:'15 mm shown, any hook',size:'Any size',note:'Fully customisable size.'},
+ {id:'tulipsweater',cat:'cardigans',name:'Tulip Square Summer Sweater',by:'Wilmade',url:'https://wilmade.com/tulip-square-summer-sweater/',level:null,video:null,technique:{id:'SIGXlvZ--W8',label:'Watch how to make the tulip square'},access:'open',terms:null,yarn:'Light / DK, weight 3 (Lion Brand Coboo)',hook:'6 mm, 4.5 mm for ribbing',size:'XS to 5XL',note:'Made from tulip granny squares.'},
+
+ // ---------- BAGS ----------
+ {id:'sixrect',cat:'bags',name:'Six Rectangles Bag',by:'Wilmade',url:'https://wilmade.com/six-rectangles-bag/',level:'Easy',video:'hQnotSejd0U',access:'signup',terms:'US',yarn:'Worsted, weight 4, held double',hook:'6 mm',size:'23 × 23 cm',note:'A round base plus six rectangles.'},
+ {id:'marketbag',cat:'bags',name:'Easy Market Bag',by:'Wilmade',url:'https://wilmade.com/crochet-market-bag/',level:'Easy',video:'qaNYwn6TKmg',access:'signup',terms:'US',yarn:'Worsted, weight 4, held double',hook:'6 mm',size:'35.5 × 29 cm',note:'Folded corners make a sturdy base.'},
+ {id:'cubebag',cat:'bags',name:'3D Cube Bag',by:'Wilmade',url:'https://wilmade.com/3d-cube-bag/',level:'Intermediate',video:'ugZNLPpK8g4',access:'signup',terms:'US',yarn:'Worsted, weight 4, 3 colours, held double',hook:'6 mm',size:'42 × 45 cm',note:'Three colours make a 3D illusion.'},
+ {id:'trapeze',cat:'bags',name:'Tulip Square Tote',by:'Wilmade',url:'https://wilmade.com/tulip-square-trapeze-tote/',level:null,video:'Ap7OkD1nAQw',access:'open',terms:null,yarn:'Bulky, weight 5',hook:'6 mm, 4.5 mm for straps',size:'38 × 38 cm',note:'Granny-square tote.'},
+ {id:'leeleetote',cat:'bags',name:'Granny Square Tote Bag',by:'Leelee Knits',url:'https://leeleeknits.com/crochet-tote-bag-pattern-free/',level:'Beginner',video:'xUEMEA-B8AM',access:'open',terms:null,yarn:'DK (Rico Baby Cotton Soft)',hook:'3.75 mm',size:'Made from 15 squares of 12.7 cm',note:'Squares joined into a tote.'},
+ {id:'beachbag',cat:'bags',name:'Lake Beach Bag',by:'Hayhay Crochet',url:'https://hayhaycrochet.com/crochet-patterns/accessories/crochet-lake-beach-bag/',level:null,video:'b1tsB4YBXK0',access:'open',terms:null,yarn:'DK or worsted, or raffia',hook:'5 mm',size:'Not given',note:'Summer beach bag.'},
+ {id:'jotote',cat:'bags',name:'Easy Tote Bag',by:'Jo to the World',url:'https://jototheworld.com/crochet-tote-bag',level:'Easy',video:null,videoNote:'The designer says there is a full video on her page.',access:'open',terms:'US',yarn:'Worsted, weight 4, held double',hook:'6.5 mm',size:'About 28 × 41 × 10 cm',note:'Only single crochet, chain and slip stitch.'},
+
+ // ---------- HATS ----------
+ {id:'beanie',cat:'hats',name:'Easy Crochet Beanie',by:'Wilmade',url:'https://wilmade.com/easy-crochet-beanie/',level:'Easy',video:'I-MTMEK0hug',access:'signup',terms:'US',yarn:'Light, weight 3, held double',hook:'8 mm',size:'Toddler, child and adult',note:'Three sizes in one pattern.'},
+ {id:'sunhat',cat:'hats',name:'Bucket Sun Hat',by:'Hayhay Crochet',url:'https://hayhaycrochet.com/crochet-patterns/accessories/easy-crochet-sun-hat/',level:null,video:'Vm9X1K2L8hY',access:'open',terms:null,yarn:'Raffia or cotton',hook:'4.5 mm',size:'2 sizes (up to 58 cm, 61 cm and up)',note:'Wide sun brim.'},
+ {id:'leeleebeanie',cat:'hats',name:'Easy Fluffy Beanie',by:'Leelee Knits',url:'https://leeleeknits.com/easy-crochet-beanie-pattern/',level:'Beginner',video:'ekrLapw7LMs',access:'open',terms:null,yarn:'Worsted (Hobbii Fluffy Day)',hook:'4 mm',size:'Adult, head 53–61 cm',note:'About a third of a skein.'},
+ {id:'ribbedleelee',cat:'hats',name:'Ribbed Beanie',by:'Leelee Knits',url:'https://leeleeknits.com/ribbed-crochet-beanie-pattern/',level:null,video:'AY-5u4iaHP8',access:'open',terms:null,yarn:'Worsted',hook:'3.75 mm',size:'Head 53–56 cm',note:'Classic ribbed look.'},
+ {id:'santa',cat:'hats',name:'Chunky Santa Hat',by:'Hayhay Crochet',url:'https://hayhaycrochet.com/crochet-patterns/accessories/chunky-crochet-santa-hat/',level:null,video:null,access:'open',terms:null,yarn:'Chunky, weight 5',hook:'9 mm',size:"Women's and men's",note:'Quick holiday hat.'},
+
+ // ---------- HAIR & ACCESSORIES ----------
+ {id:'scrunchie',cat:'accessories',name:'Crochet Scrunchie',by:"Noor's Knits",url:'https://noorsknits.com/crochet-scrunchie-pattern-free-with-full-video-tutorial/',level:'Beginner',video:'DFYJj4tl4WM',access:'open',terms:null,yarn:'Worsted, weight 4 and a hair elastic',hook:'5.5 mm',size:'Not given',note:'Worked onto a hair tie.'},
+ {id:'bandana',cat:'accessories',name:'Easy Crochet Bandana',by:'Treasurie',url:'https://blog.treasurie.com/crochet-bandana/',level:'Beginner',video:'7WDlprF7rK8',access:'open',terms:'US',yarn:'DK cotton',hook:'4 mm',size:'19 × 35.5 cm, ties 36 cm',note:'Uses about half a ball.'},
+ {id:'patchband',cat:'accessories',name:'Patchwork Granny Bandana',by:'Annie Design Crochet',url:'https://www.anniedesigncrochet.com/crochet-bandana-head-scarf-free-pattern/',level:null,video:null,access:'open',terms:'US',yarn:'Fingering scraps, about 40 g',hook:'3.5 mm',size:'66 × 30 cm',note:'You need to know granny squares first.'},
+ {id:'headscarf',cat:'accessories',name:'Triangle Head / Hip Scarf',by:'Hayhay Crochet',url:'https://hayhaycrochet.com/crochet-patterns/accessories/crochet-triangle-head-hip-scarf/',level:null,video:'Btfv9wpMWcA',access:'open',terms:null,yarn:'Fingering (merino)',hook:'3 mm',size:'Not given',note:'Wear on the head, hips or neck.'},
+ {id:'gloves',cat:'accessories',name:'Fingerless Gloves',by:'Hayhay Crochet',url:'https://hayhaycrochet.com/crochet-patterns/accessories/crochet-fingerless-gloves/',level:null,video:'RDRzvxZX9Wc',access:'open',terms:null,yarn:'Worsted, weight 4',hook:'4 mm',size:'Adjustable',note:'About 72 g of yarn.'},
+ {id:'balaclava',cat:'accessories',name:'Granny Square Balaclava',by:'Hayhay Crochet',url:'https://hayhaycrochet.com/crochet-patterns/accessories/crochet-granny-square-balaclava/',level:null,video:'D7QzKJ3mnjo',access:'open',terms:null,yarn:'Weight 4',hook:'5 mm (4 mm optional)',size:'Child and adult',note:'Made from granny squares.'},
+
+ // ---------- SCARVES & SHAWLS ----------
+ {id:'suchsimple',cat:'scarves',name:'Such Simple Shawl',by:'Wilmade',url:'https://wilmade.com/such-simple-shawl/',level:'Beginner',video:'2KUdGNOEYZA',access:'open',terms:'US',yarn:'Light, weight 3 (gradient cake)',hook:'6 mm',size:'65 × 165 cm',note:'One cake does the colour changes.'},
+ {id:'dreamy',cat:'scarves',name:'Dreamy Days Shawl',by:'Wilmade',url:'https://wilmade.com/dreamy-days-shawl/',level:'Easy',video:'XzHlMp2DPis',access:'signup',terms:'US',yarn:'Sport, weight 2, 6 colours',hook:'4 mm',size:'142 × 56 cm',note:'Colourful striped shawl.'},
+ {id:'hailey',cat:'scarves',name:'Happy Hailey Scarf',by:'Wilmade',url:'https://wilmade.com/happy-hailey-scarf/',level:'Beginner',video:'CXK0HZwyDyI',access:'open',terms:'US',yarn:'Bulky, weight 5',hook:'6 mm',size:'Kids or adult',note:'Fringed scarf.'},
+ {id:'andrea',cat:'scarves',name:'Awesome Andrea Scarf',by:'Wilmade',url:'https://wilmade.com/awesome-andrea-scarf/',level:'Easy',video:'spY9kTOKsOU',access:'signup',terms:null,yarn:'Medium, weight 4',hook:'10 mm',size:'28 × 235 cm',note:'Fast with a big hook.'},
+ {id:'mille',cat:'scarves',name:'Miss Mille Scarf',by:'Wilmade',url:'https://wilmade.com/miss-mille-scarf/',level:null,video:'z914Hyeqe3E',access:'open',terms:null,yarn:'Light, weight 3 (Scheepjes Whirl)',hook:'3.5 mm',size:'20 × 200 cm',note:'Long gradient scarf.'},
+ {id:'dcshawl',cat:'scarves',name:'Double Crochet All The Way Shawl',by:'Wilmade',url:'https://wilmade.com/double-crochet-all-the-way-shawl/',level:'Beginner',video:'1frmDm1aq1o',access:'open',terms:null,yarn:'Light, weight 3 (gradient cake)',hook:'4 mm',size:'60 × 160 cm',note:'Only double crochet.'},
+ {id:'vshawl',cat:'scarves',name:'Simple V-Stitch Shawl',by:'Wilmade',url:'https://wilmade.com/simple-v-stitch-shawl/',level:null,video:'TUNOIY2Syww',access:'open',terms:null,yarn:'Bulky, weight 5',hook:'10 mm',size:'56 × 216 cm',note:'Quick chunky shawl.'},
+ {id:'stripeme',cat:'scarves',name:'Stripe Me Shawl',by:'Wilmade',url:'https://wilmade.com/stripe-me-shawl/',level:null,video:'FfSyM-2I8ik',access:'open',terms:null,yarn:'Not given',hook:'6 mm',size:'75 × 180 cm',note:'Triangle shawl with stripes.'},
+ {id:'bellavita',cat:'scarves',name:'Bella Vita Shawl',by:'Wilmade',url:'https://wilmade.com/bella-vita-shawl/',level:null,video:null,technique:{id:'XjB3nBhbUJw',label:'Watch the puff stitch'},access:'open',terms:'US',yarn:'Gradient cake, 1,000 m',hook:'3.5 mm',size:'75 × 175 cm',note:'Lacy shawl with puff stitches.'},
+ {id:'triangleshawl',cat:'scarves',name:'Easy Triangle Shawl',by:'Leelee Knits',url:'https://leeleeknits.com/easy-triangle-shawl-crochet-pattern/',level:null,video:'Scyl9R9Xl_U',access:'open',terms:null,yarn:'Worsted (Hobbii Amigo XL)',hook:'5.5 mm',size:'170 × 97 cm',note:'Can be worn as a scarf.'},
+ {id:'winterscarf',cat:'scarves',name:'Cozy Winter Scarf',by:'Leelee Knits',url:'https://leeleeknits.com/crochet-winter-scarf-pattern/',level:null,video:null,access:'open',terms:null,yarn:'Worsted / aran',hook:'5.5 mm',size:'25 × 175 cm',note:'Finished with tassels.'},
+
+ // ---------- TOYS ----------
+ {id:'banana',cat:'toys',name:'Banana Keychain',by:'DIY Fluffies',url:'https://www.mariskavos.nl/free-banana-crochet-pattern/',level:'Beginner',video:'bXpsIrVF81o',access:'open',terms:'US',yarn:'Sport cotton or super bulky chenille',hook:'2.5 mm or 5 mm',size:'8 cm or 18 cm',note:'No sewing needed.'},
+ {id:'orange',cat:'toys',name:'Orange Keychain',by:'DIY Fluffies',url:'https://www.mariskavos.nl/free-orange-crochet-pattern/',level:null,video:'NO9UinUc0jU',access:'open',terms:null,yarn:'Sport cotton, chenille or blanket yarn',hook:'2.5 mm to 8 mm',size:'4.5 cm to 15 cm',note:'Four size options.'},
+ {id:'chili',cat:'toys',name:'Chili Pepper',by:'DIY Fluffies',url:'https://www.mariskavos.nl/free-chili-pepper-crochet-pattern/',level:null,video:'nci7TEHyWVI',access:'open',terms:null,yarn:'Sport cotton or super bulky chenille',hook:'2.5 mm or 5 mm',size:'8 cm or 17 cm',note:'Mini amigurumi.'},
+ {id:'mrblue',cat:'toys',name:'Mr. Blue Monster',by:'DIY Fluffies',url:'https://www.mariskavos.nl/mr-blue-free-monster-crochet-pattern/',level:'Beginner',video:null,access:'open',terms:null,yarn:'Sport cotton',hook:'2.5 mm',size:'11 cm',note:'Cute little monster.'},
+ {id:'bat',cat:'toys',name:'Spikey the Bat',by:'DIY Fluffies',url:'https://www.mariskavos.nl/free-bat-amigurumi-crochet-pattern/',level:'Beginner',video:null,access:'open',terms:null,yarn:'Sport cotton',hook:'2.5 mm',size:'About 22 cm',note:'Halloween bat.'},
+ {id:'snail',cat:'toys',name:'Suzan the Snail',by:'DIY Fluffies',url:'https://www.mariskavos.nl/free-suzan-the-snail-crochet-pattern/',level:'Beginner',video:null,access:'open',terms:null,yarn:'Any (sport cotton shown)',hook:'2.5 mm to 8 mm',size:'16 cm with sport cotton',note:'Spiral shell.'},
+ {id:'ozzy',cat:'toys',name:'Ozzy the Bear',by:'DIY Fluffies',url:'https://www.mariskavos.nl/free-ozzy-the-bear-crochet-pattern/',level:'Beginner',video:null,access:'open',terms:'US',yarn:'Sport cotton or bulky chenille',hook:'2.5 mm or 4 mm',size:'10 cm or 14 cm',note:'Needs safety eyes and stuffing.'},
+ {id:'molly',cat:'toys',name:'Molly the Cat',by:'DIY Fluffies',url:'https://www.mariskavos.nl/free-molly-the-cat-crochet-pattern/',level:'Beginner',video:null,access:'open',terms:'US',yarn:'Sport cotton or bulky chenille',hook:'2.5 mm or 4 mm',size:'11 cm or 14 cm',note:'A small cat with a hat.'},
+ {id:'octopus',cat:'toys',name:'10-Minute Baby Octopus',by:'Sweet Softies',url:'https://www.sweetsofties.com/2023/02/baby-octopus.html',level:'Beginner',video:'sxTc7uqR-hk',access:'open',terms:null,yarn:'Super bulky, weight 6',hook:'5 mm',size:'3.8 cm tall',note:'No sewing needed.'},
+ {id:'bunny',cat:'toys',name:'15-Minute Bunny',by:'Sweet Softies',url:'https://www.sweetsofties.com/2024/02/15-minute-bunny.html',level:'Beginner',video:'IzOjzzCc9N0',access:'open',terms:null,yarn:'Super bulky, weight 6',hook:'5 mm',size:'7 cm tall',note:'No sewing needed.'},
+
+ // ---------- HOME & BLANKETS ----------
+ {id:'granny',cat:'home',name:'Basic Granny Square',by:'The Purple Poncho',url:'https://www.thepurpleponcho.com/basic-granny-square/',level:'Easy',video:'fLzm2_3R9ps',access:'open',terms:'US',yarn:'Worsted, weight 4, 4 colours',hook:'5 mm',size:'12.7 × 12.7 cm',note:'The building block for bags and blankets.'},
+ {id:'daisy',cat:'home',name:'Daisy Flower Coasters',by:'Leelee Knits',url:'https://leeleeknits.com/easy-daisy-crochet-flower-coasters/',level:'Beginner',video:null,technique:{id:'8Ke-iVIcRfg',label:'Watch the technique: reversible tapestry crochet'},access:'open',terms:'US',yarn:'DK, 2 colours',hook:'3.25 mm',size:'10.8 × 10.8 cm',note:'A gentle first try at colourwork.'},
+ {id:'hayhay',cat:'home',name:'Daisy Flower Coaster',by:'Hayhay Crochet',url:'https://hayhaycrochet.com/crochet-patterns/home-decor/beginner-friendly-daisy-flower-coaster/',level:'Easy',video:null,videoNote:'The page title says it includes a video tutorial.',access:'open',terms:'US',yarn:'Worsted cotton',hook:'4 mm',size:'Not given',note:'Round flower coaster.'},
+ {id:'baskets',cat:'home',name:'Hanging Baskets',by:'Leelee Knits',url:'https://leeleeknits.com/crochet-hanging-baskets-free-pattern/',level:null,video:'2fMV6ft1iO0',access:'open',terms:null,yarn:'Cotton ribbon yarn',hook:'9 mm',size:'15 × 36 cm hanging',note:'For fruit and veg.'},
+ {id:'pillow',cat:'home',name:'Pillow Cover',by:'Leelee Knits',url:'https://leeleeknits.com/boho-throw-pillow-crochet-pattern/',level:'Beginner',video:null,access:'open',terms:null,yarn:'Bulky (WeCrochet Swish Bulky)',hook:'5.5 mm',size:'51 × 51 cm',note:'Two square panels.'},
+ {id:'stripedblanket',cat:'home',name:'Striped Blanket for Beginners',by:'Leelee Knits',url:'https://leeleeknits.com/a-classic-crochet-baby-blanket-pattern/',level:'Beginner',video:null,access:'open',terms:null,yarn:'Worsted (Knit Picks Brava)',hook:'5 mm',size:'90 × 116 cm',note:'Simple stripes.'},
+ {id:'modernblanket',cat:'home',name:'Modern Blanket',by:'Leelee Knits',url:'https://leeleeknits.com/modern-crochet-blanket-pattern/',level:'Beginner',video:null,technique:{id:'0d5Pezb4BXY',label:'Watch the blanket stitch'},access:'open',terms:null,yarn:'Worsted',hook:'4.5 mm',size:'94 × 135 cm',note:'Textured throw.'},
+ {id:'elizabeth',cat:'home',name:'Elizabeth Stitch Blanket',by:'Leelee Knits',url:'https://leeleeknits.com/elizabeth-stitch-crochet-blanket-pattern/',level:'Beginner',video:'zZ-rQw4EF4k',access:'open',terms:null,yarn:'Worsted',hook:'6 mm',size:'81 × 117 cm',note:'Textured stitch.'},
+ {id:'bobble',cat:'home',name:'Colourful Bobble Blanket',by:'Leelee Knits',url:'https://leeleeknits.com/colourful-striped-crochet-blanket-pattern/',level:'Beginner',video:null,technique:{id:'vW7i1XVuQgE',label:'Watch the slanted bobble stitch'},access:'open',terms:null,yarn:'Worsted',hook:'5 mm',size:'95 × 130 cm',note:'Bright stripes.'},
+ {id:'cloudburst',cat:'home',name:'Cloudburst Baby Blanket',by:'Leelee Knits',url:'https://leeleeknits.com/cloudburst-striped-crochet-baby-blanket-pattern/',level:'Beginner',video:null,technique:{id:'HNGtiLstJto',label:'Watch the half double crochet V stitch'},access:'open',terms:null,yarn:'Worsted',hook:'5 mm',size:'69 × 107 cm',note:'Soft striped baby blanket.'},
+ {id:'leeleec2c',cat:'home',name:'Easy Corner to Corner Blanket',by:'Leelee Knits',url:'https://leeleeknits.com/easy-corner-to-corner-crochet-blanket/',level:null,video:null,videoNote:'The page has a video tutorial.',access:'open',terms:null,yarn:'Worsted, 4 colours',hook:'Not given',size:'76 × 94 cm',note:'Worked diagonally.'},
+];
+
+/* Picture sources (video thumbnail used automatically when there's a video) */
+const IMGSRC = {
+ rectcardi:null,
+ upnorth:'https://makeanddocrew.com/wp-content/uploads/2018/11/up-north-crochet-cardigan-pattern-for-beginners-7.jpg',
+ chunkyvest:'https://wilmade.com/wp-content/uploads/2022/11/Wow-chunky-vest-free-crochet-pattern-by-Wilmade-horizontal-banner.jpg',
+ tulipsweater:'https://wilmade.com/wp-content/uploads/2024/08/Tulip-Square-Summer-Sweater.jpg',
+ clutch:'https://brianakdesigns.com/wp-content/uploads/2025/06/Envelope-M.png',
+ jotote:'https://jototheworld.com/wp-content/uploads/2022/12/crochet-tote-bag-feat.jpg',
+ grannybag:'https://theloopylamb.com/wp-content/uploads/2026/04/granny-square-bag-pattern-683x1024.png',
+ jude:'https://images.garnstudio.com/drops/mag/146/13/13-2.jpg',
+ mdbucket:'https://makeanddocrew.com/wp-content/uploads/2022/05/crochet-bucket-hat-pattern-free-SQ.jpg',
+ ribbed:'https://makeanddocrew.com/wp-content/uploads/2017/12/one-hour-fast-crochet-beanie-free-pattern-53.jpg',
+ beret:'https://www.yarnspirations.com/cdn/shop/products/RHC0116-014858M.jpg?v=1687398305',
+ santa:'https://hayhaycrochet.com/wp-content/uploads/2023/12/IMG_5589.jpeg',
+ scrunchie2:'https://www.dreameecrochet.com/wp-content/uploads/2023/11/Quick-and-Easy-Crochet-Scrunchie-Free-Pattern-Free-crochet-hairtie-pattern-2.jpg',
+ patchband:'https://www.anniedesigncrochet.com/wp-content/uploads/2024/06/crochet-patchwork-granny-bandana-sm-sq.jpg',
+ headband:'https://blog.bellacococrochet.com/wp-content/uploads/2019/11/headband-main-edited-scaled.jpg',
+ risingtide:'https://makeanddocrew.com/wp-content/uploads/2018/07/rising-tide-crochet-shawl-7.jpg',
+ bellavita:'https://wilmade.com/wp-content/uploads/2017/07/Bella-Vita-Shawl-free-crochet-pattern-by-Wilmade-horizontal-banner.jpg',
+ winterscarf:'https://leeleeknits.com/wp-content/uploads/2022/12/Crochet-Winter-Scarf-Pattern-1-scaled.jpg',
+ mrblue:'https://www.mariskavos.nl/wp-content/uploads/2026/09/mr-blue-soc.jpg',
+ bat:'https://www.mariskavos.nl/wp-content/uploads/2026/07/bat-social.jpg',
+ snail:null,
+ ozzy:'https://www.mariskavos.nl/wp-content/uploads/2026/04/free-Ozzy-the-Bear-Crochet-Pattern.jpg',
+ molly:'https://www.mariskavos.nl/wp-content/uploads/2026/03/cat-crochet-pattern-social.jpg',
+ daisy:'https://leeleeknits.com/wp-content/uploads/2026/07/Crochet-Flower-Coasters-1.jpg',
+ hayhay:'https://hayhaycrochet.com/wp-content/uploads/2021/09/IMG_5270_jpg.jpg',
+ pillow:'https://leeleeknits.com/wp-content/uploads/2023/08/Boho-Throw-Pillow-Crochet-Pattern-5.jpg',
+ stripedblanket:'https://leeleeknits.com/wp-content/uploads/2022/07/Classic-Crochet-Baby-Blanket-Pattern-3-copy.jpg',
+ modernblanket:'https://leeleeknits.com/wp-content/uploads/2025/08/Modern-Crochet-Blanket-Pattern-1-scaled.jpg',
+ bobble:'https://leeleeknits.com/wp-content/uploads/2023/05/Colorful-Striped-Crochet-Blanket-0.jpg',
+ cloudburst:'https://leeleeknits.com/wp-content/uploads/2022/09/Striped-Crochet-Baby-Blanket-Pattern-5.jpg',
+ leeleec2c:null,
+ c2c:'https://www.yarnspirations.com/cdn/shop/files/RHC0502-023640M.jpg?v=1710175973'
+};
+
+const P2=[{"id": "easypocketcardigan", "cat": "cardigans", "name": "Easy Pocket Cardigan", "by": "For The Frills", "url": "https://forthefrills.com/crochet-briar-oversized-pocket-cardigan-free-pattern-video-tutorial/", "level": "Beginner", "video": "x-l73I9MWS0", "access": "open", "terms": null, "yarn": "Aran/Worsted (4)", "hook": "6.5 mm", "size": "XS to 3XL", "note": "", "img": "https://forthefrills.com/wp-content/uploads/2019/08/easy-crochet-cardigan-pockets-free-pattern-video-tutorial-featured-image60.jpg"}, {"id": "ribbedcrochetsweat", "cat": "cardigans", "name": "Ribbed Crochet Sweater", "by": "For The Frills", "url": "https://forthefrills.com/easy-ribbed-crochet-sweater-free-pattern/", "level": "Easy", "video": "5cy347bE8Ew", "access": "open", "terms": null, "yarn": "Sport (2)", "hook": "5 mm", "size": "XS to 5XL", "note": "", "img": "https://forthefrills.com/wp-content/uploads/2020/10/easy-oversized-crochet-sweater-ribbed-pullover-free-pattern-1.jpg"}, {"id": "beginnerribbedcrop", "cat": "tops", "name": "Beginner Ribbed Crop Top", "by": "For The Frills", "url": "https://forthefrills.com/beginner-crochet-crop-top-free-pattern-video-tutorial/", "level": "Beginner", "video": null, "access": "open", "terms": null, "yarn": "DK (3)", "hook": "5 mm", "size": "XS to 3XL", "note": "", "img": "https://forthefrills.com/wp-content/uploads/2020/04/summer-ribbed-crop-top-beginner-easy-pattern-free-crochet-featured-image.jpg"}, {"id": "seabreezevnecktank", "cat": "tops", "name": "Sea Breeze V-Neck Tank", "by": "For The Frills", "url": "https://forthefrills.com/sea-breeze-tank-top-free-crochet-pattern/", "level": "Easy", "video": "3wr69B3E0FY", "access": "open", "terms": null, "yarn": "DK", "hook": "4.5 mm", "size": "XS to 3XL", "note": "", "img": "https://forthefrills.com/wp-content/uploads/2019/05/easy-summer-crochet-tank-top-free-pattern-video-tutorial-featuredimage60.jpg"}, {"id": "oversizedcardiganw", "cat": "cardigans", "name": "Oversized Cardigan with Knit-Look Ribbing", "by": "For The Frills", "url": "https://forthefrills.com/crochet-beginner-oversized-cardigan-knit-look-ribbing-pattern/", "level": "Advanced beginner", "video": null, "access": "open", "terms": null, "yarn": "Worsted (4)", "hook": "6.5 mm", "size": "XS to 5XL", "note": "", "img": "https://forthefrills.com/wp-content/uploads/2023/02/balloon-sleeve-boxy-cropped-cardigan-free-crochet-sweater-pattern-1.jpg"}, {"id": "oversizedwafflecar", "cat": "cardigans", "name": "Oversized Waffle Cardigan", "by": "For The Frills", "url": "https://forthefrills.com/oversized-waffle-cardigan-free-crochet-pattern/", "level": "Easy", "video": null, "access": "open", "terms": null, "yarn": "Worsted (4)", "hook": "6 mm", "size": "XS to 5XL", "note": "", "img": "https://forthefrills.com/wp-content/uploads/2022/11/oversized-crochet-jumper-free-pattern-textured-waffle-stitch-diy-1.jpg"}, {"id": "quickchunkycropped", "cat": "cardigans", "name": "Quick & Chunky Cropped Sweater", "by": "For The Frills", "url": "https://forthefrills.com/crochet-brooklyn-chunky-cropped-sweater-free-pattern/", "level": "Easy", "video": "YpIvFPnkamY", "access": "open", "terms": null, "yarn": "Super bulky (6)", "hook": "9 mm", "size": "XS to 3XL", "note": "", "img": "https://forthefrills.com/wp-content/uploads/2021/01/cropped-chunky-crochet-sweater-free-pattern-video-tutorial.jpg"}, {"id": "chunkyvneckbuttonc", "cat": "cardigans", "name": "Chunky V-Neck Button Cardigan", "by": "For The Frills", "url": "https://forthefrills.com/chunky-textured-button-cardigan-free-crochet-pattern/", "level": "Easy", "video": "jUU6dofBvaI", "access": "open", "terms": null, "yarn": "Bulky (5)", "hook": "9 mm", "size": "XS to 5XL", "note": "", "img": "https://forthefrills.com/wp-content/uploads/2021/10/free-crochet-pattern-cropped-chunky-cardigan-video-1.jpg"}, {"id": "chunkybombercardig", "cat": "cardigans", "name": "Chunky Bomber Cardigan with Pockets", "by": "For The Frills", "url": "https://forthefrills.com/chunky-bomber-cardigan-pockets-free-crochet-pattern-video-tutorial/", "level": "Intermediate", "video": "5eI1Pmey1j0", "access": "open", "terms": null, "yarn": "Super bulky (6)", "hook": "12 mm and 9 mm", "size": "XS to 3XL", "note": "", "img": "https://forthefrills.com/wp-content/uploads/2020/01/featured-image-modern-crochet-bomber-jacket-pockets-free-cardigan-pattern.jpg"}, {"id": "easyscallopwrap", "cat": "scarves", "name": "Easy Scallop Wrap", "by": "For The Frills", "url": "https://forthefrills.com/spring-scallop-crochet-wrap-free-pattern/", "level": "Advanced beginner", "video": "HFiQ5ulJbwE", "access": "open", "terms": null, "yarn": "Worsted (4)", "hook": "6 mm", "size": "184 x 62 cm", "note": "", "img": "https://forthefrills.com/wp-content/uploads/2022/10/lace-scallop-shawl-easy-crochet-pattern-featured-image.jpg"}, {"id": "vneckbuttoncardiga", "cat": "cardigans", "name": "V-Neck Button Cardigan", "by": "For The Frills", "url": "https://forthefrills.com/v-neck-button-cardigan-free-crochet-pattern/", "level": "Easy", "video": "EcHD1PRtlNI", "access": "open", "terms": null, "yarn": "DK (3)", "hook": "5 mm", "size": "XS to 3XL", "note": "", "img": "https://forthefrills.com/wp-content/uploads/2020/09/simple-v-neck-button-cardigan-free-crochet-pattern-video.jpg"}, {"id": "sweetheartcroptop4", "cat": "tops", "name": "Sweetheart Crop Top (4 styles)", "by": "For The Frills", "url": "https://forthefrills.com/beginner-textured-crop-top-free-crochet-pattern/", "level": "Beginner", "video": "WPUVJyHkics", "access": "open", "terms": null, "yarn": "DK (3)", "hook": "5 mm", "size": "XXS to 5XL", "note": "", "img": "https://forthefrills.com/wp-content/uploads/2022/05/how-to-crochet-a-sweetheart-crop-top-free-pattern-summer-diy.jpg"}, {"id": "mossstitchpocketco", "cat": "cardigans", "name": "Moss Stitch Pocket Coat", "by": "For The Frills", "url": "https://forthefrills.com/beginner-crochet-chunky-pocket-coat-free-pattern/", "level": "Advanced beginner", "video": "cK-UXFjbUy8", "access": "open", "terms": null, "yarn": "Bulky (5)", "hook": "9 mm", "size": "XS to 5XL", "note": "", "img": "https://forthefrills.com/wp-content/uploads/2021/10/simple-oversized-crochet-coat-pockets-free-pattern-video-1.jpg"}, {"id": "chunkyribbedbeanie", "cat": "hats", "name": "Chunky Ribbed Beanie", "by": "For The Frills", "url": "https://forthefrills.com/easy-crochet-chunky-ribbed-beanie-free-pattern/", "level": "Advanced beginner", "video": "6LEkXhayGzo", "access": "open", "terms": null, "yarn": "Bulky (5)", "hook": "7 mm", "size": "Preemie to adult large", "note": "", "img": "https://forthefrills.com/wp-content/uploads/2021/10/knit-like-chunky-ribbed-beanie-pom-pom-free-crochet-pattern.jpg"}, {"id": "simplesquareneckcr", "cat": "tops", "name": "Simple Square Neck Crop Top", "by": "For The Frills", "url": "https://forthefrills.com/simple-cropped-top-free-crochet-pattern-video/", "level": "Advanced beginner", "video": "OQRSNJnxvJQ", "access": "open", "terms": null, "yarn": "DK (3)", "hook": "5 mm", "size": "XXS to 5XL", "note": "", "img": "https://forthefrills.com/wp-content/uploads/2021/04/crochet-summer-cropped-tank-top-free-pattern-easy.jpg"}, {"id": "ribbedtanktop", "cat": "tops", "name": "Ribbed Tank Top", "by": "For The Frills", "url": "https://forthefrills.com/easy-crochet-summer-tank-top-free-pattern/", "level": "Easy", "video": "Cb9uCuxphAM", "access": "open", "terms": null, "yarn": "DK (3)", "hook": "4.5 mm", "size": "XS to 3XL", "note": "", "img": "https://forthefrills.com/wp-content/uploads/2020/05/crochet-easy-tank-top-for-summer-free-pattern-featured-image.jpg"}, {"id": "oceanbreezevnecksw", "cat": "cardigans", "name": "Ocean Breeze V-Neck Sweater", "by": "For The Frills", "url": "https://forthefrills.com/easy-v-neck-sweater-summer-crochet-free-pattern/", "level": "Easy", "video": "4pFBUjVjJhc", "access": "open", "terms": null, "yarn": "Worsted (4)", "hook": "5 mm", "size": "XS to 3XL", "note": "", "img": "https://forthefrills.com/wp-content/uploads/2020/04/easy-crochet-summer-v-neck-sweater-free-pattern-video-tutorial-featured-image.jpg"}, {"id": "forestbreezevneckt", "cat": "tops", "name": "Forest Breeze V-Neck Tee", "by": "For The Frills", "url": "https://forthefrills.com/forest-breeze-tee-free-crochet-pattern/", "level": "Easy", "video": "wQeaOtX_S7Y", "access": "open", "terms": null, "yarn": "DK", "hook": "4 mm", "size": "XS to 3XL", "note": "", "img": "https://forthefrills.com/wp-content/uploads/2020/01/free-crochet-pattern-v-neck-summer-top-featured-image.jpg"}, {"id": "scallopvneckcamiso", "cat": "tops", "name": "Scallop V-Neck Camisole", "by": "For The Frills", "url": "https://forthefrills.com/scallop-v-neck-tank-top-free-crochet-pattern/", "level": "Easy", "video": null, "access": "open", "terms": null, "yarn": "Sport (2)", "hook": "3.75 mm", "size": "XS to 3XL", "note": "", "img": "https://forthefrills.com/wp-content/uploads/2020/07/free-pattern-crochet-v-neck-tank-top-featured.jpg"}, {"id": "texturedmeshtankto", "cat": "tops", "name": "Textured Mesh Tank Top", "by": "For The Frills", "url": "https://forthefrills.com/simple-mesh-tank-top-free-crochet-pattern/", "level": "Easy", "video": "B2O1RfdK95c", "access": "open", "terms": null, "yarn": "DK (3)", "hook": "5 mm", "size": "XS to 5XL", "note": "", "img": "https://forthefrills.com/wp-content/uploads/2021/05/easy-mesh-singlet-tank-top-free-crochet-pattern-1-1.jpg"}, {"id": "cuddlycardigan", "cat": "cardigans", "name": "Cuddly Cardigan", "by": "For The Frills", "url": "https://forthefrills.com/cuddly-cardigan-easy-free-crochet-pattern/", "level": null, "video": null, "access": "open", "terms": null, "yarn": "Worsted (4)", "hook": "5 mm", "size": "XS to 3XL", "note": "", "img": "https://forthefrills.com/wp-content/uploads/2020/01/cuddly-cardigan-free-crochet-pattern-featured-image.jpg"}, {"id": "ribbedbuttoncardig", "cat": "cardigans", "name": "Ribbed Button Cardigan", "by": "For The Frills", "url": "https://forthefrills.com/crochet-ribbed-button-cardigan-free-pattern-video/", "level": "Easy", "video": "VmSKhXVeFrk", "access": "open", "terms": null, "yarn": "Sport (2)", "hook": "5 mm", "size": "XS to 5XL", "note": "", "img": "https://forthefrills.com/wp-content/uploads/2021/02/how-to-crochet-button-cardigan-ribbed-oversized-free-pattern-video-tutorial.jpg"}, {"id": "easycroptop", "cat": "tops", "name": "Easy Crop Top", "by": "For The Frills", "url": "https://forthefrills.com/easy-crochet-crop-top-free-pattern-+-video-tutorial/", "level": "Easy", "video": "b1cmGvtvMJU", "access": "open", "terms": null, "yarn": "Worsted (4)", "hook": "5 mm", "size": "XS to XL", "note": "", "img": "https://forthefrills.com/wp-content/uploads/2021/01/easy-crochet-crop-top-free-pattern-video-featured-image.jpg"}, {"id": "chunkytietanktop", "cat": "tops", "name": "Chunky Tie Tank Top", "by": "Hayhay Crochet", "url": "https://hayhaycrochet.com/crochet-patterns/tops/crochet-tie-tank-top/", "level": "Easy", "video": "t4DjEBQSlyk", "access": "open", "terms": null, "yarn": "Super bulky (6)", "hook": "10 mm", "size": "XS to 5XL", "note": "", "img": "https://hayhaycrochet.com/wp-content/uploads/2022/04/IMG_5882_jpg.jpg"}, {"id": "scrapstripedpullov", "cat": "cardigans", "name": "Scrap Striped Pullover", "by": "Hayhay Crochet", "url": "https://hayhaycrochet.com/crochet-patterns/sweaters/crochet-scrap-pullover/", "level": "Easy", "video": "mhUw7l60Yag", "access": "open", "terms": null, "yarn": "Worsted (4)", "hook": "6 mm", "size": "Any size", "note": "", "img": "https://hayhaycrochet.com/wp-content/uploads/2022/03/IMG_5135_jpg.jpg"}, {"id": "checkerboardsweate", "cat": "cardigans", "name": "Checkerboard Sweater Vest", "by": "Hayhay Crochet", "url": "https://hayhaycrochet.com/crochet-patterns/sweater-vests/crochet-checkerboard-sweater-vest/", "level": null, "video": "Ay2Qtrq84O0", "access": "open", "terms": null, "yarn": "Medium (4)", "hook": "4.5 mm", "size": "S/M to 2XL/3XL", "note": "", "img": "https://hayhaycrochet.com/wp-content/uploads/2022/01/IMG_1519_jpg.jpg"}, {"id": "ribbedcheckerbeani", "cat": "hats", "name": "Ribbed Checker Beanie", "by": "Hayhay Crochet", "url": "https://hayhaycrochet.com/crochet-patterns/accessories/simple-checkered-beanie/", "level": null, "video": "Uqnfl9Sl2J0", "access": "open", "terms": null, "yarn": "Medium (4)", "hook": "5 mm", "size": "One size", "note": "", "img": "https://hayhaycrochet.com/wp-content/uploads/2021/12/IMG_0098_jpg.jpg"}, {"id": "70sgrannysquareves", "cat": "cardigans", "name": "70s Granny Square Vest", "by": "Hayhay Crochet", "url": "https://hayhaycrochet.com/crochet-patterns/sweater-vests/easy-crochet-granny-square-vest/", "level": null, "video": "hFJ2w3EN3DQ", "access": "open", "terms": null, "yarn": "Medium (4)", "hook": "5 mm", "size": "XS to 5XL", "note": "", "img": "https://hayhaycrochet.com/wp-content/uploads/2021/11/IMG_9529_jpg.jpg"}, {"id": "cozygrannysquareca", "cat": "cardigans", "name": "Cozy Granny Square Cardigan", "by": "Hayhay Crochet", "url": "https://hayhaycrochet.com/crochet-patterns/cardigans/crochet-cozy-granny-square-cardigan/", "level": null, "video": "f7Jl_L0eO4w", "access": "open", "terms": null, "yarn": "Medium (4)", "hook": "5 mm", "size": "XS/S to 3XL/4XL", "note": "", "img": "https://hayhaycrochet.com/wp-content/uploads/2021/11/IMG_8901.jpg"}, {"id": "giantstrawberryplu", "cat": "toys", "name": "Giant Strawberry Plush", "by": "Hayhay Crochet", "url": "https://hayhaycrochet.com/crochet-patterns/home-decor/crochet-strawberry-plush/", "level": null, "video": "2EVZciLaAFg", "access": "open", "terms": null, "yarn": "Super bulky (6)", "hook": "10 mm", "size": "Not given", "note": "", "img": "https://hayhaycrochet.com/wp-content/uploads/2022/08/IMG_0500.jpg"}, {"id": "grannytriangleband", "cat": "accessories", "name": "Granny Triangle Bandana", "by": "Hayhay Crochet", "url": "https://hayhaycrochet.com/crochet-patterns/accessories/beginner-crochet-bandana/", "level": "Beginner", "video": "VJm-7AjpTIM", "access": "open", "terms": null, "yarn": "Fine (2)", "hook": "3.5 mm", "size": "20 x 33 cm", "note": "", "img": "https://hayhaycrochet.com/wp-content/uploads/2021/11/IMG_7981_jpg.jpg"}];
+const V2=[{"id": "yt_hYOMuOV6VxI", "cat": "accessories", "name": "Granny Triangle Bandana", "by": "Crochet with Dr. Tai", "video": "hYOMuOV6VxI", "level": null, "kind": "video"}, {"id": "yt_uWKioI4AdHk", "cat": "accessories", "name": "Granny Triangle Bandana, step by step", "by": "wildroseliving", "video": "uWKioI4AdHk", "level": null, "kind": "video"}, {"id": "yt_u1XDODPob5s", "cat": "hats", "name": "Easy Crochet Bucket Hat (beginner friendly)", "by": "Crizel Tabieros", "video": "u1XDODPob5s", "level": "Beginner", "kind": "video"}, {"id": "yt_kilzI0sdIok", "cat": "hats", "name": "How to Crochet a Bucket Hat (beginner friendly)", "by": "Mermaids and Hooks", "video": "kilzI0sdIok", "level": "Beginner", "kind": "video"}, {"id": "yt_0YJkseTYCfs", "cat": "hats", "name": "Quick & Easy Bucket Hat (beginner)", "by": "madebymara", "video": "0YJkseTYCfs", "level": "Beginner", "kind": "video"}, {"id": "yt_h3nDhETo0s8", "cat": "hats", "name": "Easy Bucket Hat for Beginners", "by": "ElyseCrochets", "video": "h3nDhETo0s8", "level": "Beginner", "kind": "video"}, {"id": "yt_Rg4x-1ovxkM", "cat": "hats", "name": "How to Crochet a Bucket Hat (in depth)", "by": "NoteswNat", "video": "Rg4x-1ovxkM", "level": null, "kind": "video"}, {"id": "yt_Vm1hDEvsbn0", "cat": "hats", "name": "Bucket Hat for Kids (easy beginner)", "by": "Diving Ducks Crochet", "video": "Vm1hDEvsbn0", "level": "Beginner", "kind": "video"}, {"id": "yt_Ru_FNYlhCVI", "cat": "hats", "name": "Easy Bucket Hat Anyone Can Make", "by": "Secret Yarnery", "video": "Ru_FNYlhCVI", "level": "Easy", "kind": "video"}, {"id": "yt_KOKRfmRnjDA", "cat": "hats", "name": "Bucket Hat (beginner friendly)", "by": "Arosiesky", "video": "KOKRfmRnjDA", "level": "Beginner", "kind": "video"}, {"id": "yt_2Ypdej1QMQE", "cat": "hats", "name": "Easy Beanie for Beginners", "by": "Cherilyn Q", "video": "2Ypdej1QMQE", "level": "Beginner", "kind": "video"}, {"id": "yt_Gng2D7uu5ZQ", "cat": "hats", "name": "Easy No-Bunch Beanie for Beginners", "by": "ElyseCrochets", "video": "Gng2D7uu5ZQ", "level": "Beginner", "kind": "video"}, {"id": "yt_DYs4oX4D_po", "cat": "hats", "name": "Easy Ribbed Beanie for Beginners", "by": "ElyseCrochets", "video": "DYs4oX4D_po", "level": "Beginner", "kind": "video"}, {"id": "yt_pNtB4LDeKQI", "cat": "hats", "name": "Easy Beanie for Beginners, step by step", "by": "Crochet Jewel", "video": "pNtB4LDeKQI", "level": "Beginner", "kind": "video"}, {"id": "yt_mxyx1vZhTzc", "cat": "hats", "name": "Fast & Easy Beanie, 6 sizes (beginner)", "by": "Bella Coco", "video": "mxyx1vZhTzc", "level": "Beginner", "kind": "video"}, {"id": "yt_VZnnWO7VV3k", "cat": "hats", "name": "Easy Half Double Crochet Beanie (beginner)", "by": "Hooked on Homemade Happiness", "video": "VZnnWO7VV3k", "level": "Beginner", "kind": "video"}, {"id": "yt_6zKDQ4PjPac", "cat": "hats", "name": "Classic Rectangle Beanie (beginner)", "by": "Hooked on Homemade Happiness", "video": "6zKDQ4PjPac", "level": "Beginner", "kind": "video"}, {"id": "yt_40-7whOSTP0", "cat": "hats", "name": "Beanie for Absolute Beginners", "by": "Secret Yarnery", "video": "40-7whOSTP0", "level": "Beginner", "kind": "video"}, {"id": "yt_GHBFl_8gMzE", "cat": "hats", "name": "Basic Slouchy Beanie (easy beginner)", "by": "Hooked on Homemade Happiness", "video": "GHBFl_8gMzE", "level": "Beginner", "kind": "video"}, {"id": "yt_KpD9NK9hoZs", "cat": "hats", "name": "Basic Beanie for Beginners", "by": "Hooked on Homemade Happiness", "video": "KpD9NK9hoZs", "level": "Beginner", "kind": "video"}, {"id": "yt_03j1TMjXXx8", "cat": "hats", "name": "Easy Beret for Beginners", "by": "Atreyu Crochet", "video": "03j1TMjXXx8", "level": "Beginner", "kind": "video"}, {"id": "yt_qmLX1ql0RLQ", "cat": "hats", "name": "Crochet Beret", "by": "Crochet Bits", "video": "qmLX1ql0RLQ", "level": null, "kind": "video"}, {"id": "yt_F9MZoSsbd4k", "cat": "hats", "name": "Easy Beret (beginner)", "by": "Styles by Omah", "video": "F9MZoSsbd4k", "level": "Beginner", "kind": "video"}, {"id": "yt_VWY8LXnGwVM", "cat": "hats", "name": "Bright and Breezy Beret for Beginners", "by": "Atreyu Crochet", "video": "VWY8LXnGwVM", "level": "Beginner", "kind": "video"}, {"id": "yt_0xRvlsBvXl4", "cat": "hats", "name": "Tam / Beret (easy, beginner friendly)", "by": "DOYcreations", "video": "0xRvlsBvXl4", "level": "Beginner", "kind": "video"}, {"id": "yt_44G3wh8VbXk", "cat": "hats", "name": "Easy Beret, step by step", "by": "Winding Road Crochet", "video": "44G3wh8VbXk", "level": "Easy", "kind": "video"}, {"id": "yt_0YgxcLjTqbg", "cat": "hats", "name": "Easy French Beret", "by": "Sirin's Crochet", "video": "0YgxcLjTqbg", "level": "Easy", "kind": "video"}, {"id": "yt_0I2TSF_Hl1g", "cat": "hats", "name": "Easy French Beret (beginner friendly)", "by": "Sirin's Crochet", "video": "0I2TSF_Hl1g", "level": "Beginner", "kind": "video"}, {"id": "yt_DFNwCT_FkG0", "cat": "hats", "name": "Easy Beret (beginner friendly)", "by": "Ahsel Anne by Felicia", "video": "DFNwCT_FkG0", "level": "Beginner", "kind": "video"}, {"id": "yt_uJNEK9Rniyo", "cat": "hats", "name": "Basic Bucket Hat, step by step (beginner)", "by": "LadyVKreations", "video": "uJNEK9Rniyo", "level": "Beginner", "kind": "video"}, {"id": "yt_-Y_6z53kRYk", "cat": "hats", "name": "One-Stitch Bucket Hat (easy, beginner)", "by": "Andrea Quinteros", "video": "-Y_6z53kRYk", "level": "Beginner", "kind": "video"}, {"id": "yt_gXHrpr69ZGQ", "cat": "accessories", "name": "Hair Scrunchies (easy & fast)", "by": "Just Be Crafty", "video": "gXHrpr69ZGQ", "level": "Easy", "kind": "video"}, {"id": "yt_oqCqQt2-PwM", "cat": "accessories", "name": "Scrunchie for Beginners", "by": "Hopeful Turns", "video": "oqCqQt2-PwM", "level": "Beginner", "kind": "video"}, {"id": "yt_uC3iDWQiEgQ", "cat": "accessories", "name": "4-Round Ruffle Scrunchie (easy)", "by": "Secret Yarnery", "video": "uC3iDWQiEgQ", "level": "Easy", "kind": "video"}, {"id": "yt_ApN7mVEG9mY", "cat": "accessories", "name": "How to Crochet Scrunchies", "by": "Kendall Tai", "video": "ApN7mVEG9mY", "level": null, "kind": "video"}, {"id": "yt_UkJu3PeRHFo", "cat": "accessories", "name": "Easy Scrunchie (beginner friendly)", "by": "Treasurie", "video": "UkJu3PeRHFo", "level": "Beginner", "kind": "video"}, {"id": "yt_gqnsfQVtAH4", "cat": "accessories", "name": "Easy Scrunchie for Beginners", "by": "ElyseCrochets", "video": "gqnsfQVtAH4", "level": "Beginner", "kind": "video"}, {"id": "yt_HlYgZoE4mfM", "cat": "accessories", "name": "Easy Quick Scrunchie", "by": "Jo to the World Creations", "video": "HlYgZoE4mfM", "level": "Easy", "kind": "video"}, {"id": "yt_dChhPVqP_dY", "cat": "accessories", "name": "Favourite Hair Scrunchie", "by": "Rich Textures Crochet", "video": "dChhPVqP_dY", "level": null, "kind": "video"}, {"id": "yt_s4-l6FoOVaY", "cat": "accessories", "name": "Easy Ear Warmer Headband", "by": "CreationsMisfit", "video": "s4-l6FoOVaY", "level": "Easy", "kind": "video"}, {"id": "yt_x_rp4jNrhE4", "cat": "accessories", "name": "Easy Ear Warmer Headband", "by": "Calluna Crochet", "video": "x_rp4jNrhE4", "level": "Easy", "kind": "video"}, {"id": "yt_9RQtijI9tb4", "cat": "accessories", "name": "Headband / Ear Warmer for Beginners", "by": "Handmade By Mei", "video": "9RQtijI9tb4", "level": "Beginner", "kind": "video"}, {"id": "yt_7r2hK366xN8", "cat": "accessories", "name": "Quick and Easy Headband", "by": "Handmade By Mei", "video": "7r2hK366xN8", "level": "Easy", "kind": "video"}, {"id": "yt_e9OS8dQ-ct8", "cat": "accessories", "name": "Chunky Ear Warmer (easy)", "by": "Jo to the World Creations", "video": "e9OS8dQ-ct8", "level": "Easy", "kind": "video"}, {"id": "yt_htYvdv2VF3o", "cat": "accessories", "name": "Simple Twist Ear Warmer (easy)", "by": "Jo to the World Creations", "video": "htYvdv2VF3o", "level": "Easy", "kind": "video"}, {"id": "yt_j3JTkwUBh3E", "cat": "accessories", "name": "Ear Warmer Headband for Beginners", "by": "HappyBerry Crochet", "video": "j3JTkwUBh3E", "level": "Beginner", "kind": "video"}, {"id": "yt_pGtkt3UdtyY", "cat": "accessories", "name": "Twisted Ear Warmer for Beginners", "by": "Hopeful Turns", "video": "pGtkt3UdtyY", "level": "Beginner", "kind": "video"}, {"id": "yt_CCodZb38lWA", "cat": "accessories", "name": "Twisted Headband, Trinity Stitch (beginner)", "by": "Diving Ducks Crochet", "video": "CCodZb38lWA", "level": "Beginner", "kind": "video"}, {"id": "yt_O3bHkdvMjDg", "cat": "accessories", "name": "Twisted Headband (easy, beginner)", "by": "Just Be Crafty", "video": "O3bHkdvMjDg", "level": "Beginner", "kind": "video"}, {"id": "yt_dMhxj4boXL8", "cat": "accessories", "name": "Quick & Easy Bow Hair Clip", "by": "The Crochet Channel", "video": "dMhxj4boXL8", "level": "Easy", "kind": "video"}, {"id": "yt_G8S5hL-B2_g", "cat": "accessories", "name": "Bow Hair Clip", "by": "The Crochet Wizard", "video": "G8S5hL-B2_g", "level": null, "kind": "video"}, {"id": "yt_nOe5lLuDYBE", "cat": "accessories", "name": "Hair Clips for Beginners", "by": "Chapter and Chains Co", "video": "nOe5lLuDYBE", "level": "Beginner", "kind": "video"}, {"id": "yt_ceCM-6olahE", "cat": "accessories", "name": "Hair Bow", "by": "Artsy Maki", "video": "ceCM-6olahE", "level": null, "kind": "video"}, {"id": "yt_16Srk-Hp7uI", "cat": "accessories", "name": "Bow Hair Tie & Hair Clip", "by": "Diving Ducks Crochet", "video": "16Srk-Hp7uI", "level": null, "kind": "video"}, {"id": "yt_5XBFQuekQW0", "cat": "accessories", "name": "Perfect Bow for Hair Clips", "by": "Katie's Angel crochet", "video": "5XBFQuekQW0", "level": null, "kind": "video"}, {"id": "yt_KBnSRZZh8R8", "cat": "accessories", "name": "Lace Bow Hair Clip", "by": "Joy as it Flies", "video": "KBnSRZZh8R8", "level": null, "kind": "video"}, {"id": "yt_8KSKDKuWsj0", "cat": "accessories", "name": "Easy Hair Clips, Two Styles & Flowers", "by": "Sweet Softies", "video": "8KSKDKuWsj0", "level": "Easy", "kind": "video"}, {"id": "yt_ulpioNjyY-s", "cat": "accessories", "name": "Lemon Earrings / Keychain (beginner friendly)", "by": "Wildflower Collections", "video": "ulpioNjyY-s", "level": "Beginner", "kind": "video"}, {"id": "yt_CcbF_XJwWAY", "cat": "accessories", "name": "Tennis & Baseball Keychains / Earrings (beginner)", "by": "Elamrani Crochet", "video": "CcbF_XJwWAY", "level": "Beginner", "kind": "video"}, {"id": "yt_6Sb6in7uL8o", "cat": "accessories", "name": "Easy Keychain", "by": "NS Crafts", "video": "6Sb6in7uL8o", "level": "Easy", "kind": "video"}, {"id": "yt_KC1QLZx-jPE", "cat": "accessories", "name": "Cute Easy Keychains (beginner friendly)", "by": "Poplar Crochet", "video": "KC1QLZx-jPE", "level": "Beginner", "kind": "video"}, {"id": "yt_5w-4urVlCFw", "cat": "accessories", "name": "Easy Earrings", "by": "HiruHandmade Crochet", "video": "5w-4urVlCFw", "level": "Easy", "kind": "video"}, {"id": "yt_1iJk5kWp7dk", "cat": "toys", "name": "Cute Pig Keychain (easy, beginner)", "by": "Ngochan Crochet", "video": "1iJk5kWp7dk", "level": "Beginner", "kind": "video"}, {"id": "yt_plXK3hQKPMc", "cat": "accessories", "name": "Easy Earrings for Beginners", "by": "HiruHandmade Crochet", "video": "plXK3hQKPMc", "level": "Beginner", "kind": "video"}, {"id": "yt_nXyhxYvjeHQ", "cat": "bags", "name": "Cotton Tote Bag, step by step (beginner)", "by": "crochet daniela", "video": "nXyhxYvjeHQ", "level": "Beginner", "kind": "video"}, {"id": "yt_m50eGEaLX8g", "cat": "bags", "name": "Aesthetic Tote Bag, step by step (beginner)", "by": "crochet daniela", "video": "m50eGEaLX8g", "level": "Beginner", "kind": "video"}, {"id": "yt_ho9qJiKEbsI", "cat": "bags", "name": "Basic Tote Bag for Beginners", "by": "Hopeful Turns", "video": "ho9qJiKEbsI", "level": "Beginner", "kind": "video"}, {"id": "yt_d5Sjsow3gzc", "cat": "bags", "name": "Easy Tote / Shoulder Bag for Beginners", "by": "ElyseCrochets", "video": "d5Sjsow3gzc", "level": "Beginner", "kind": "video"}, {"id": "yt_Cqirk3BTlg4", "cat": "bags", "name": "Tote Bag (beginner friendly)", "by": "Chompu Handicrafts", "video": "Cqirk3BTlg4", "level": "Beginner", "kind": "video"}, {"id": "yt_LVQsqS_vxnc", "cat": "bags", "name": "Mesh Tote Bag (beginner friendly)", "by": "Chompu Handicrafts", "video": "LVQsqS_vxnc", "level": "Beginner", "kind": "video"}, {"id": "yt_e2r6PowRNiY", "cat": "bags", "name": "Easy Tote Bag (beginner friendly)", "by": "Chompu Handicrafts", "video": "e2r6PowRNiY", "level": "Beginner", "kind": "video"}, {"id": "yt_W_qXDFMF-HY", "cat": "bags", "name": "Super Easy Tote Bag (beginner friendly)", "by": "Chompu Handicrafts", "video": "W_qXDFMF-HY", "level": "Beginner", "kind": "video"}, {"id": "yt_eWtIGWp9ng8", "cat": "bags", "name": "Easiest Tote Bag (beginner, in depth)", "by": "Faith.Wisest", "video": "eWtIGWp9ng8", "level": "Beginner", "kind": "video"}, {"id": "yt_GTFE-92qWjo", "cat": "bags", "name": "Shell Stitch Crossbody Bag", "by": "Rinku HandCrafts", "video": "GTFE-92qWjo", "level": null, "kind": "video"}, {"id": "yt_Fx0MU7QICTs", "cat": "bags", "name": "Easy Crossbody / Shoulder Bag (beginner friendly)", "by": "VivCrochets", "video": "Fx0MU7QICTs", "level": "Beginner", "kind": "video"}, {"id": "yt_kHu5mTpBeOI", "cat": "bags", "name": "Easy Shoulder Bag, any size (beginner)", "by": "ElyseCrochets", "video": "kHu5mTpBeOI", "level": "Beginner", "kind": "video"}, {"id": "yt_pZ8UHTPlsiM", "cat": "bags", "name": "Simple Easy Crossbody Bag (beginner friendly)", "by": "ViVi Berry Crochet", "video": "pZ8UHTPlsiM", "level": "Beginner", "kind": "video"}, {"id": "yt_7BhsGz6TKO0", "cat": "bags", "name": "Basic Shoulder Bag, any size", "by": "crochet daniela", "video": "7BhsGz6TKO0", "level": null, "kind": "video"}, {"id": "yt_jNLFXMkqe_Q", "cat": "bags", "name": "Easy 3-in-1 Summer Bag", "by": "mahum", "video": "jNLFXMkqe_Q", "level": "Easy", "kind": "video"}, {"id": "yt_foTnntesmk4", "cat": "bags", "name": "Stylish Crossbody Bag (beginner friendly)", "by": "Crafting Shed", "video": "foTnntesmk4", "level": "Beginner", "kind": "video"}, {"id": "yt_q6pBi3orw28", "cat": "bags", "name": "Crossbody Sling Bag (beginner friendly)", "by": "Chompu Handicrafts", "video": "q6pBi3orw28", "level": "Beginner", "kind": "video"}, {"id": "yt_Yi4bkn9VDjQ", "cat": "bags", "name": "Easy Granny Square Bag", "by": "Jewels and Jones", "video": "Yi4bkn9VDjQ", "level": "Easy", "kind": "video"}, {"id": "yt_wQRLVeM-ISU", "cat": "bags", "name": "Granny Square Bag for Beginners (3 squares)", "by": "Maddy Marie", "video": "wQRLVeM-ISU", "level": "Beginner", "kind": "video"}, {"id": "yt_SfjVzMC6bxY", "cat": "bags", "name": "Granny Square Bag for Beginners", "by": "atar crochet", "video": "SfjVzMC6bxY", "level": "Beginner", "kind": "video"}, {"id": "yt_2TV3cEaltKI", "cat": "bags", "name": "Granny Square Bag, step by step", "by": "Toh Handmade", "video": "2TV3cEaltKI", "level": null, "kind": "video"}, {"id": "yt_ISyec_gL37A", "cat": "bags", "name": "Easy Granny Square Mini Handbag", "by": "Myshe", "video": "ISyec_gL37A", "level": "Easy", "kind": "video"}, {"id": "yt_sfaYVrDKgwg", "cat": "bags", "name": "Easy Granny Square Bag, any size (beginner)", "by": "ElyseCrochets", "video": "sfaYVrDKgwg", "level": "Beginner", "kind": "video"}, {"id": "yt_awK6yvsnTI4", "cat": "bags", "name": "Granny Square Bag, step by step", "by": "Tasty Dumpling Living", "video": "awK6yvsnTI4", "level": null, "kind": "video"}, {"id": "yt_MhjkDcuIhVs", "cat": "bags", "name": "Granny Square Bag, full step by step", "by": "Tasty Dumpling Living", "video": "MhjkDcuIhVs", "level": null, "kind": "video"}, {"id": "yt_EuyMilWlPug", "cat": "bags", "name": "Easy Granny Square Shoulder Purse", "by": "Kayla", "video": "EuyMilWlPug", "level": "Easy", "kind": "video"}, {"id": "yt_vZW6mhEfVSk", "cat": "bags", "name": "Phone Bag, 2HDC stitch", "by": "Chompu Handicrafts", "video": "vZW6mhEfVSk", "level": null, "kind": "video"}, {"id": "yt_CbOxJ48-P_c", "cat": "bags", "name": "Easy Phone Bag for Beginners", "by": "Claudetta Crochet", "video": "CbOxJ48-P_c", "level": "Beginner", "kind": "video"}, {"id": "yt_TMzGtWW0tyg", "cat": "bags", "name": "Easy Phone Bag / Crossbody for Beginners", "by": "Hopeful Turns", "video": "TMzGtWW0tyg", "level": "Beginner", "kind": "video"}, {"id": "yt_s4vISNGxm-A", "cat": "bags", "name": "Phone Bag, step by step", "by": "Chompu Handicrafts", "video": "s4vISNGxm-A", "level": null, "kind": "video"}, {"id": "yt_pHZNiVr3icc", "cat": "bags", "name": "Simple Phone Bag for Beginners", "by": "Chompu Handicrafts", "video": "pHZNiVr3icc", "level": "Beginner", "kind": "video"}, {"id": "yt_RgLy6u4-zdY", "cat": "bags", "name": "Phone Crossbody Bag", "by": "Crochet & Crafts Therapy by Chompu", "video": "RgLy6u4-zdY", "level": null, "kind": "video"}, {"id": "yt_XLO_zl5Fr40", "cat": "tops", "name": "Very Easy Crop Top (beginner)", "by": "MayaLunaCorazon", "video": "XLO_zl5Fr40", "level": "Beginner", "kind": "video"}, {"id": "yt_AO8dluzOw_w", "cat": "tops", "name": "Top-Down Crop Top for Beginners (easy)", "by": "ABoC Studio", "video": "AO8dluzOw_w", "level": "Beginner", "kind": "video"}, {"id": "yt_H9CpcT6JVPM", "cat": "tops", "name": "Easy Summer Crop Top (beginner friendly)", "by": "Ima", "video": "H9CpcT6JVPM", "level": "Beginner", "kind": "video"}, {"id": "yt_SHRLdZ1cLLk", "cat": "tops", "name": "Easy Summer Crop Top for Beginners", "by": "ElyseCrochets", "video": "SHRLdZ1cLLk", "level": "Beginner", "kind": "video"}, {"id": "yt_RIHbdFk5jy0", "cat": "tops", "name": "Lacy Crop Top (easy, beginner)", "by": "Yelena StyleCrochet", "video": "RIHbdFk5jy0", "level": "Beginner", "kind": "video"}, {"id": "yt_yGWK_Ofllew", "cat": "tops", "name": "Halter Top, step by step", "by": "Kemunto crochets", "video": "yGWK_Ofllew", "level": null, "kind": "video"}, {"id": "yt_eyEJ9rSULAY", "cat": "tops", "name": "Easy Granny Stitch Crop Top (beginner friendly)", "by": "Treasurie", "video": "eyEJ9rSULAY", "level": "Beginner", "kind": "video"}, {"id": "yt_AGLjXzDe_Hw", "cat": "tops", "name": "Mesh Crop Top (beginner friendly)", "by": "by Kristine", "video": "AGLjXzDe_Hw", "level": "Beginner", "kind": "video"}, {"id": "yt_1WUp1zJ2qd8", "cat": "tops", "name": "Easy Summer Tank for Beginners", "by": "it's erin b.", "video": "1WUp1zJ2qd8", "level": "Beginner", "kind": "video"}, {"id": "yt__BXilNFzf1I", "cat": "tops", "name": "Easy Tank Top", "by": "crochettoz", "video": "_BXilNFzf1I", "level": "Easy", "kind": "video"}, {"id": "yt_zDlXoTSJ9ZY", "cat": "tops", "name": "Tank Top from One Rectangle (beginner)", "by": "Diving Ducks Crochet", "video": "zDlXoTSJ9ZY", "level": "Beginner", "kind": "video"}, {"id": "yt_xx5ExQLNLZU", "cat": "tops", "name": "Casual Summer Tank, any size", "by": "it's erin b.", "video": "xx5ExQLNLZU", "level": null, "kind": "video"}, {"id": "yt_OAcgjFrNKwA", "cat": "tops", "name": "Easiest Classic Tank Top", "by": "TCDDIY", "video": "OAcgjFrNKwA", "level": "Easy", "kind": "video"}, {"id": "yt_TQuxxZS5So0", "cat": "tops", "name": "Basic Tank Top (beginner friendly)", "by": "Katie Joslin", "video": "TQuxxZS5So0", "level": "Beginner", "kind": "video"}, {"id": "yt_6FJyzMODJdY", "cat": "tops", "name": "Tank Top", "by": "Krystal Everdeen", "video": "6FJyzMODJdY", "level": null, "kind": "video"}, {"id": "yt_VCzM67PyZ2w", "cat": "tops", "name": "Easy Top-Down Tee for Beginners", "by": "Hooked on Homemade Happiness", "video": "VCzM67PyZ2w", "level": "Beginner", "kind": "video"}, {"id": "yt_OxjbAbPwUtw", "cat": "tops", "name": "T-Shirt (beginner friendly)", "by": "Zx Crochets", "video": "OxjbAbPwUtw", "level": "Beginner", "kind": "video"}, {"id": "yt_ZDfh_OFq9es", "cat": "tops", "name": "Top with Embroidery (beginner friendly)", "by": "WONDER NETTING", "video": "ZDfh_OFq9es", "level": "Beginner", "kind": "video"}, {"id": "yt_X-YRER1nw30", "cat": "tops", "name": "Sporty Crop T-Shirt", "by": "TCDDIY", "video": "X-YRER1nw30", "level": null, "kind": "video"}, {"id": "yt_NrMAZEDx2ps", "cat": "tops", "name": "Trendy Collared Shirt", "by": "TCDDIY", "video": "NrMAZEDx2ps", "level": null, "kind": "video"}, {"id": "yt_vaGKhY-_yvU", "cat": "tops", "name": "No-Sew T-Shirt, size adjustable", "by": "Calluna Crochet", "video": "vaGKhY-_yvU", "level": null, "kind": "video"}, {"id": "yt_QUzGKADKJLk", "cat": "tops", "name": "Easy Airy Tee", "by": "Cozy Nooks Designs", "video": "QUzGKADKJLk", "level": "Easy", "kind": "video"}, {"id": "yt_u1jA4OXHEfw", "cat": "tops", "name": "Easy Halter Top", "by": "Diving Ducks Crochet", "video": "u1jA4OXHEfw", "level": "Easy", "kind": "video"}, {"id": "yt_93Ao1JIniN8", "cat": "tops", "name": "Halter Top (beginner friendly)", "by": "Krystal Everdeen", "video": "93Ao1JIniN8", "level": "Beginner", "kind": "video"}, {"id": "yt_slc-l19YhO4", "cat": "tops", "name": "Multi-Way Wrap Halter Top (beginner friendly)", "by": "Emma Warrender", "video": "slc-l19YhO4", "level": "Beginner", "kind": "video"}, {"id": "yt_Uwq9JSOX3eo", "cat": "tops", "name": "Easiest Halter Top, all sizes", "by": "Crochet Lovers", "video": "Uwq9JSOX3eo", "level": "Easy", "kind": "video"}];
+
+const IMG={};
+/* ---------- more icons ---------- */
+Object.assign(I,{
+  tPat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>',
+  tFav:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7a4.3 4.3 0 0 1 7.5 2.8C19.5 15.4 12 20 12 20z"/></svg>',
+  tMust:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/><path d="M9 15l2 2 4-4"/></svg>',
+  bell:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>',
+  book:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6c3-1.5 6-1.5 9 0v13c-3-1.5-6-1.5-9 0zM21 6c-3-1.5-6-1.5-9 0v13c3-1.5 6-1.5 9 0z"/></svg>',
+  hook:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 3c1.7 0 3 1.3 3 3s-1.3 3-3 3l-1 0L5 21"/><path d="M18 9l-2-2"/></svg>'
+});
+
+/* ---------- categories ---------- */
+const CATS = [
+  {id:'tops',name:'Tops',hint:'Tanks, tees, shrugs, ponchos',sw:'#A8355F'},
+  {id:'cardigans',name:'Sweaters & cardigans',hint:'Cardis, vests, sweaters',sw:'#6F4F94'},
+  {id:'bags',name:'Bags',hint:'Totes, crossbodies, clutches',sw:'#95601A'},
+  {id:'hats',name:'Hats',hint:'Beanies, bucket hats, berets',sw:'#874B40'},
+  {id:'accessories',name:'Hair & accessories',hint:'Scrunchies, bandanas, gloves',sw:'#8A4E72'},
+  {id:'scarves',name:'Scarves & shawls',hint:'Wraps and scarves',sw:'#2F6C8C'},
+  {id:'toys',name:'Toys',hint:'Amigurumi animals and food',sw:'#8F5717'},
+  {id:'home',name:'Home & blankets',hint:'Coasters, pillows, blankets',sw:'#9A3B34'}
+];
+const CAT = Object.fromEntries(CATS.map(c=>[c.id,c]));
+const LEVELS = ['Beginner','Easy','Advanced beginner','Intermediate'];
+if(typeof P2!=='undefined') P.push(...P2);
+if(typeof V2!=='undefined') P.push(...V2.map(v=>({...v,url:'https://www.youtube.com/watch?v='+v.video,access:'video',terms:null,yarn:null,hook:null,size:null,note:''})));
+P.forEach(p=>{ p.sw = CAT[p.cat].sw; });
+const isVid = p => p.kind==='video';
+const PM = Object.fromEntries(P.map(p=>[p.id,p]));
+const isBeg = p => p.level==='Beginner' || p.level==='Easy';
+
+/* ---------- videos ---------- */
+const STITCHES = [
+  {ab:'ch',name:'Chain',uk:'ch',vid:'SHXe23-p-Go',by:'Heart Hook Home'},
+  {ab:'MR',name:'Magic ring',uk:'magic ring',vid:'RcjXb47Tm3w',by:'Wilmade',d:'A loop you pull closed. Starts hats and toys.'},
+  {ab:'sc',name:'Single crochet',uk:'dc',vid:'Uc4E0_IrXhw',by:'Heart Hook Home'},
+  {ab:'hdc',name:'Half double crochet',uk:'htr',vid:'b86rdgUlGfM',by:'Heart Hook Home'},
+  {ab:'dc',name:'Double crochet',uk:'tr',vid:'hK3rILLwusE',by:'Heart Hook Home'}
+];
+const VIDS = {};
+STITCHES.forEach(s=>VIDS[s.vid]={id:s.vid,title:'How to: '+s.name,by:s.by,kind:'stitch',ab:s.ab});
+P.forEach(p=>{
+  if(p.video) VIDS[p.video]={id:p.video,title:p.name,by:p.by,kind:'project',pid:p.id,cat:p.cat};
+  if(p.lefty) VIDS[p.lefty]={id:p.lefty,title:p.name+' (left-handed)',by:p.by,kind:'project',pid:p.id,cat:p.cat};
+  if(p.technique) VIDS[p.technique.id]={id:p.technique.id,title:p.technique.label.replace(/^Watch (the |how to make the )?/,'').replace(/^./,c=>c.toUpperCase())+' (for '+p.name+')',by:p.by,kind:'project',pid:p.id,cat:p.cat};
+});
+
+/* ---------- pictures (stored inside the app) ---------- */
+function pImg(p){ return IMG[p.id] || null; }
+function vImg(id){ const v=VIDS[id]; if(IMG['v_'+id]) return IMG['v_'+id]; if(v&&v.pid&&PM[v.pid].video===id) return IMG[v.pid]||null; return null; }
+function thumbBox(p,extra=''){ const src=pImg(p); return `<div class="thumb ${extra}" style="--sw:${p.sw}">${src?`<img src="${src}" alt="" loading="lazy">`:I[p.cat]}${p.video?`<span class="vid">${I.play}Video</span>`:''}</div>`; }
+function miniBox(p,cls='mini'){ const src=pImg(p); return `<span class="${cls}" style="--sw:${p.sw}" data-thumb="${p.id}">${src?`<img src="${src}" alt="">`:I[p.cat]}</span>`; }
+
+/* ---------- storage (this phone only) ---------- */
+const store = {
+  get(k,d){try{const v=localStorage.getItem('hr:'+k);return v?JSON.parse(v):d}catch(e){return d}},
+  set(k,v){try{localStorage.setItem('hr:'+k,JSON.stringify(v))}catch(e){}}
+};
+let favP = store.get('favP', store.get('saved',[]));
+let favV = store.get('favV',[]);
+let must = store.get('must',{});
+let projects = store.get('projects',{}); // id -> {row, unit, notes, started, done, last}
+const saveAll = ()=>{store.set('favP',favP);store.set('favV',favV);store.set('must',must);store.set('projects',projects)};
+favP = favP.filter(id=>PM[id]); favV = favV.filter(id=>VIDS[id]);
+Object.keys(must).forEach(id=>{ if(!PM[id]) delete must[id]; });
+Object.keys(projects).forEach(id=>{ if(!PM[id]) delete projects[id]; });
+
+const mem = {};
+let dbp = null;
+function db(){ if(dbp) return dbp; dbp = new Promise((res)=>{ try{ const r=indexedDB.open('hookrow',1); r.onupgradeneeded=()=>r.result.createObjectStore('photos'); r.onsuccess=()=>res(r.result); r.onerror=()=>res(null);}catch(e){res(null)} }); return dbp; }
+async function getPhotos(id){ const d=await db(); if(!d) return mem[id]||[]; return new Promise(res=>{try{const q=d.transaction('photos').objectStore('photos').get(id);q.onsuccess=()=>res(q.result||[]);q.onerror=()=>res(mem[id]||[])}catch(e){res(mem[id]||[])}}); }
+async function setPhotos(id,arr){ mem[id]=arr; const d=await db(); if(!d) return; try{d.transaction('photos','readwrite').objectStore('photos').put(arr,id)}catch(e){} }
+function shrink(file){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>{ const im=new Image(); im.onload=()=>{ const s=Math.min(1,900/Math.max(im.width,im.height)); const c=document.createElement('canvas'); c.width=Math.round(im.width*s); c.height=Math.round(im.height*s); c.getContext('2d').drawImage(im,0,0,c.width,c.height); res(c.toDataURL('image/jpeg',.82)); }; im.onerror=rej; im.src=fr.result; }; fr.onerror=rej; fr.readAsDataURL(file); }); }
+
+/* ---------- dates ---------- */
+function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function daysUntil(s){ const [y,m,d]=s.split('-').map(Number); const t=new Date(); return Math.round((Date.UTC(y,m-1,d)-Date.UTC(t.getFullYear(),t.getMonth(),t.getDate()))/864e5); }
+function niceDate(s){ const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d).toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'}); }
+function duePill(s){
+  if(!s) return '';
+  const n=daysUntil(s);
+  if(n<0) return `<span class="pill due">${-n} day${n===-1?'':'s'} late</span>`;
+  if(n===0) return `<span class="pill due">Today</span>`;
+  if(n<=7) return `<span class="pill soon">In ${n} day${n===1?'':'s'}</span>`;
+  return `<span class="pill later">${niceDate(s)}</span>`;
+}
+const dueSoon = ()=>Object.entries(must).filter(([,m])=>m.date && daysUntil(m.date)<=7).sort((a,b)=>a[1].date.localeCompare(b[1].date));
+
+/* ---------- nav ---------- */
+let tab = 'home';
+let stack = [{v:'home'}];
+const cur = ()=>stack[stack.length-1];
+function go(v,arg){ stack.push({v,arg}); render(); window.scrollTo(0,0); }
+function back(){ if(stack.length>1) stack.pop(); render(); window.scrollTo(0,0); }
+function switchTab(t,sub){ tab=t; stack=[{v:t}]; if(sub) stack.push({v:sub}); render(); window.scrollTo(0,0); }
+const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const yt = id => 'https://www.youtube.com/watch?v='+id;
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.hidden=false; clearTimeout(toast.h); toast.h=setTimeout(()=>t.hidden=true,1800); }
+function backBtn(){ return `<div class="top"><button class="back" data-act="back">${I.back}Back</button></div>`; }
+function levelChip(p){ return p.level ? `<span class="level ${isBeg(p)?'beg':''}">${esc(p.level)}</span>` : `<span class="level">Level not given</span>`; }
+function card(p){
+  return `<button class="card" data-open="${p.id}">${thumbBox(p)}
+    <div class="body"><span class="name">${esc(p.name)}</span><span class="by">${esc(p.by)}</span>${levelChip(p)}</div></button>`;
+}
+function seg(name,cur,opts){ return `<div class="seg" role="group" aria-label="Show" style="grid-template-columns:repeat(${opts.length},1fr)">${opts.map(([k,l])=>`<button data-seg="${name}:${k}" aria-pressed="${cur===k}">${l}</button>`).join('')}</div>`; }
+function vcard(id,opts={}){
+  const v=VIDS[id], src=vImg(id), on=favV.includes(id);
+  const sw = v.cat?CAT[v.cat].sw:'var(--accent)';
+  return `<div style="display:flex;flex-direction:column;gap:6px">
+    <a class="vcard ${opts.main?'main':''}" href="${yt(id)}" target="_blank" rel="noopener">
+      <span class="vt" style="--sw:${sw}">${src?`<img src="${src}" alt="" loading="lazy">`:''}<span class="pb">${I.play}</span></span>
+      <span style="min-width:0"><b>${esc(opts.label||v.title)}</b><span>${esc(v.by)}</span><br><span class="open">Watch</span></span>
+    </a>
+    ${opts.noFav?'':`<div style="display:flex;gap:8px">${v.pid&&!opts.hidePattern?`<button class="chip" data-open="${v.pid}" style="flex:1;justify-content:center">See pattern</button>`:''}<button class="chip" data-favv="${id}" aria-pressed="${on}" style="${v.pid&&!opts.hidePattern?'':'flex:1;'}justify-content:center">${on?I.heartf:I.heart}${on?'Favourite':'Add to favourites'}</button></div>`}
+  </div>`;
+}
+function pItem(p,x){
+  return `<button class="pitem" data-make="${p.id}">${miniBox(p)}<span class="txt"><b>${esc(p.name)}</b><span>${x.done?'Finished':(x.row||0)+' '+(x.unit||'Row').toLowerCase()+'s done'} · ${esc(p.by)}</span></span></button>`;
+}
+
+/* ---------- Home: an overview ---------- */
+function shelfCard(p, tagHtml, action){
+  const src=pImg(p);
+  return `<button class="scard" ${action}><span class="thumb" style="--sw:${p.sw}">${src?`<img src="${src}" alt="" loading="lazy">`:I[p.cat]}${tagHtml||''}</span><span class="sname">${esc(p.name)}</span></button>`;
+}
+function shelfVid(id){
+  const v=VIDS[id], src=vImg(id), sw=v.cat?CAT[v.cat].sw:'var(--accent)';
+  return `<a class="scard" href="${yt(id)}" target="_blank" rel="noopener"><span class="thumb" style="--sw:${sw}">${src?`<img src="${src}" alt="" loading="lazy">`:''}<span class="tagp">${I.play}Video</span></span><span class="sname">${esc(v.title)}</span></a>`;
+}
+function emptyCard(text, act){ return `<button class="scard sempty" ${act}><span class="plusc">+</span><span class="sname">${text}</span></button>`; }
+function shelf(title, sub, items, more){
+  return `<div class="section"><div class="row-between"><h2>${title}</h2>${more||''}</div>${sub?`<p class="fine" style="margin-top:-6px">${sub}</p>`:''}<div class="hscroll">${items.join('')}</div></div>`;
+}
+function vHome(){
+  const all = Object.entries(projects);
+  const making = all.filter(([,x])=>!x.done).sort((a,b)=>(b[1].last||b[1].started)-(a[1].last||a[1].started));
+  const done = all.filter(([,x])=>x.done);
+  const due = dueSoon();
+  const mustList = Object.entries(must).sort((a,b)=>(a[1].date||'9999').localeCompare(b[1].date||'9999'));
+  const last = making[0];
+  const today = new Date().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'});
+  let html = `<div class="hello"><p class="fine">${today}</p><h1>Your crochet</h1></div><div class="bento">`;
+
+  // Big continue tile
+  if(last){
+    const p=PM[last[0]], x=last[1], src=pImg(p);
+    html += `<div class="bt big">
+      <div class="bimg" style="--sw:${p.sw}">${src?`<img src="${src}" alt="">`:I[p.cat]}</div>
+      <div class="bin"><div style="min-width:0"><p class="eyebrow light">Continue</p><b class="bname">${esc(p.name)}</b><span class="bsub">${x.row||0} ${(x.unit||'Row').toLowerCase()}s done</span></div>
+      <button class="bgo" data-make="${p.id}">Continue</button></div>
+      <div class="bmore">${p.video?`<a href="${yt(p.video)}" target="_blank" rel="noopener">${I.play}Video</a>`:''}${isVid(p)?'':`<a href="${p.url}" target="_blank" rel="noopener">${I.page}Pattern</a>`}</div>
+    </div>`;
+  } else {
+    html += `<div class="bt big bstart"><div class="bin" style="flex-direction:column;align-items:stretch;gap:10px">
+      <div><p class="eyebrow light">Get started</p><b class="bname">Start your first project</b><span class="bsub">Pick a pattern and tap Start this project. It shows up here with your row counter.</span></div>
+      <button class="bgo" data-tab="patterns">Find a pattern</button></div></div>`;
+  }
+
+  // Reminder tile
+  if(due.length){
+    const [id,m]=due[0];
+    html += `<button class="bt wide brem" data-open="${id}"><b>${due.length>1?`Reminders (${due.length})`:'Reminder'}</b><span class="brow"><span class="bname2">${esc(PM[id].name)}</span>${duePill(m.date)}</span></button>`;
+  } else {
+    html += `<button class="bt wide brem quiet" data-tab="must"><b>Reminders</b><span class="fine">Nothing due this week. Add a date to something on Must make.</span></button>`;
+  }
+
+  // Count tiles
+  const tile=(t,n,hint,act,cls='')=>`<button class="bt ${cls}" ${act}><b>${t}</b><span class="bn">${n}</span><span class="fine">${hint}</span></button>`;
+  html += tile('Making', making.length, making.length?'In progress':'Start a project', 'data-go="projects:now"');
+  html += tile('Made', done.length, done.length?'Finished so far':'Nothing finished yet', 'data-go="projects:done"');
+  html += tile('Favourites', favP.length+favV.length, `${favP.length} pattern${favP.length===1?'':'s'}, ${favV.length} video${favV.length===1?'':'s'}`, 'data-tab="favs"');
+  html += tile('Must make', mustList.length, due.length?`${due.length} due soon`:(mustList.length?'Your plans':'Plan what is next'), 'data-tab="must"', due.length?'bdue':'');
+
+  // Learning tile
+  html += `<div class="bt wide blearn"><b>Keep learning</b><div class="pair"><button class="btn secondary" data-tabgo="patterns:stitches">${I.play}Stitch videos</button><button class="btn secondary" data-tabgo="patterns:read">${I.book}Read a pattern</button></div></div>`;
+  html += `</div>`;
+
+  if(making.length>1) html += `<div class="section"><div class="row-between"><h2>Also on the hook</h2><button class="link-btn" data-go="projects:now">See all</button></div><div class="plist">${making.slice(1,4).map(([id,x])=>pItem(PM[id],x)).join('')}</div></div>`;
+  return html;
+}
+
+/* ---------- Patterns (patterns + tutorials together) ---------- */
+let bf = {cats:[], lvl:'all', vid:false, q:'', type:'all'};
+function filtered(){
+  const q = bf.q.trim().toLowerCase();
+  return P.filter(p=>(!bf.cats.length||bf.cats.includes(p.cat))
+    &&(bf.lvl==='all'||(bf.lvl==='none'?!p.level:p.level===bf.lvl))
+    &&(!bf.vid||p.video)&&(bf.type==='all'||(bf.type==='video'?isVid(p):!isVid(p)))
+    &&(!q||(p.name+' '+p.by+' '+CAT[p.cat].name).toLowerCase().includes(q)));
+}
+function vPatterns(){
+  const list = filtered();
+  const lv = [['all','All levels'],...LEVELS.map(l=>[l,l]),['none','Level not given']];
+  return `<div class="section"><h1>Patterns</h1><p class="lead">${P.filter(p=>!isVid(p)).length} free written patterns and ${P.filter(isVid).length} video tutorials.</p></div>
+  <div class="section"><h2>Learn the basics</h2><div class="learnrow">
+    <button class="learnbtn" data-go="stitches">${I.play}<b>Stitch videos</b><span class="fine">Chain, magic ring and more</span></button>
+    <button class="learnbtn" data-go="read">${I.book}<b>Read a pattern</b><span class="fine">Step by step</span></button>
+  </div></div>
+  <input type="search" id="q" placeholder="Search patterns" value="${esc(bf.q)}" aria-label="Search patterns">
+  <div class="section"><h2>What do you want to make?</h2><p class="fine">Tap one or more. Tap again to remove.</p>
+  <div class="cats">${CATS.map(c=>{ const n=P.filter(p=>p.cat===c.id).length; return `<button class="cat" aria-pressed="${bf.cats.includes(c.id)}" data-pick="${c.id}">${I[c.id]}<span><b>${c.name}</b><small>${n} patterns</small></span></button>`;}).join('')}</div></div>
+  <div class="filters"><span class="flabel">Show</span>
+  <div class="chips">${[['all','Everything'],['pattern','Written patterns'],['video','Video tutorials']].map(([k,l])=>`<button class="chip" data-type="${k}" aria-pressed="${bf.type===k}">${l}</button>`).join('')}</div>
+  <span class="flabel">Difficulty</span>
+  <div class="chips">${lv.map(([k,l])=>`<button class="chip" data-lvl="${k}" aria-pressed="${bf.lvl===k}">${l}</button>`).join('')}</div>
+  <div class="toggles"><button class="chip" data-bt="vid" aria-pressed="${bf.vid}">${I.play}Has a video</button>${(bf.cats.length||bf.lvl!=='all'||bf.vid||bf.q||bf.type!=='all')?`<button class="chip" data-clear>Clear filters</button>`:''}</div></div>
+  <div class="sticky-count"><h2>${list.length} pattern${list.length===1?'':'s'}</h2></div>
+  ${list.length?`<div class="grid">${list.map(card).join('')}</div>`:`<div class="empty">No patterns match. Try another difficulty or category.<button class="btn ghost" data-clear>Clear filters</button></div>`}`;
+}
+
+/* ---------- Pattern detail ---------- */
+function vPattern(id){
+  const p = PM[id], inProj = projects[id], fav = favP.includes(id), m = must[id];
+  const access = {open:'Free on the page', signup:'Free, needs email sign-up', pdf:'Free PDF download', video:'Video tutorial'}[p.access];
+  const vids = [];
+  if(p.video) vids.push(vcard(p.video,{main:true,label:'Make-along video',hidePattern:true}));
+  if(p.lefty) vids.push(vcard(p.lefty,{label:'Left-handed video',hidePattern:true}));
+  if(p.technique) vids.push(vcard(p.technique.id,{label:p.technique.label,hidePattern:true}));
+  return `${backBtn()}
+  ${thumbBox(p,'hero-img')}
+  <div class="section"><h1>${esc(p.name)}</h1><p class="lead">by ${esc(p.by)} · ${CAT[p.cat].name}</p>
+  <div class="tags">${p.level?`<span class="tag ${isBeg(p)?'beg':''}">${esc(p.level)}</span>`:`<span class="tag">Level not given</span>`}<span class="tag ${p.access==='signup'?'warn':''}">${access}</span>${p.terms?`<span class="tag">${esc(p.terms)} terms</span>`:''}</div></div>
+  ${isVid(p)?`<p class="note">A video tutorial by ${esc(p.by)}. Follow along with the video. There is no separate written pattern.</p>`:''}
+  <div class="actions"><button class="btn primary" data-start="${id}">${inProj?(inProj.done?'See finished project':'Continue project'):'Start this project'}</button></div>
+  ${vids.length?`<div class="section"><h2>Video${vids.length>1?'s':''}</h2>${vids.join('')}${p.videoNote?`<p class="fine">${esc(p.videoNote)}</p>`:''}</div>`:''}
+  ${isVid(p)?'':`<div class="section"><h2>Written pattern</h2>
+    <p class="note">${p.video?'Use it to check a row while you watch.':'There is no video for this one. Follow the written pattern row by row and use the row counter to keep your place.'} The designer owns the pattern, so it opens on their page.</p>
+    ${!p.video&&p.videoNote?`<p class="fine">${esc(p.videoNote)}</p>`:''}
+    <a class="btn secondary" href="${p.url}" target="_blank" rel="noopener">${I.page}Open the written pattern</a>
+    ${p.access==='signup'?`<p class="fine">This designer asks for your email to show the written pattern. It's still free.</p>`:''}
+  </div>`}
+  <div class="pair">
+    <button class="btn secondary ${fav?'on':''}" data-favp="${id}" aria-pressed="${fav}">${fav?I.heartf:I.heart}${fav?'Favourited':'Favourite'}</button>
+    <button class="btn secondary ${m?'on':''}" data-must="${id}" aria-pressed="${!!m}">${I.check}${m?'On Must make':'Must make'}</button>
+  </div>
+  ${m?dateBox(id,m):''}
+  ${isVid(p)?'':`<div class="section"><h2>What you need</h2>
+  <dl class="needs"><dt>Yarn</dt><dd>${esc(p.yarn)}</dd><dt>Hook</dt><dd>${esc(p.hook)}</dd><dt>Size</dt><dd>${esc(p.size)}</dd></dl>
+  ${p.note?`<p class="note">${esc(p.note)}</p>`:''}</div>`}`;
+}
+function dateBox(id,m){
+  return `<div class="datebox"><label for="d-${id}">Remind me on</label><div class="dr"><input type="date" id="d-${id}" data-date="${id}" value="${m.date||''}" min="${todayStr()}">${duePill(m.date)}${m.date?`<button class="link-btn" data-cleardate="${id}">Clear</button>`:''}</div></div>`;
+}
+
+/* ---------- Make mode ---------- */
+let confirmReset = false;
+function vMake(id){
+  const p = PM[id], x = projects[id], unit = x.unit||'Row';
+  return `${backBtn()}
+  <div class="section"><h1>${esc(p.name)}</h1><p class="lead">${x.done?'Finished':'In progress'} · by ${esc(p.by)}</p></div>
+  ${p.video?vcard(p.video,{main:true,label:'Continue the video',hidePattern:true,noFav:true}):''}
+  ${isVid(p)?'':`<a class="btn secondary" href="${p.url}" target="_blank" rel="noopener">${I.page}Open the written pattern</a>`}
+  <div class="counter">
+    <div class="label" role="group" aria-label="Counting">${['Row','Round'].map(u=>`<button data-unit="${u}" aria-pressed="${unit===u}">${u}s</button>`).join('')}</div>
+    <div class="count" aria-live="polite">${x.row||0}</div>
+    <div class="fine">${unit}s finished</div>
+    <button class="plus" data-inc="1">+ I finished a ${unit.toLowerCase()}</button>
+    ${confirmReset?`<div class="confirm"><b>Set the counter back to 0?</b><div><button class="no" data-reset="no">Keep it</button><button class="yes" data-reset="yes">Set to 0</button></div></div>`:
+    `<div class="small"><button data-inc="-1">− Undo</button><button data-reset="ask">Reset</button></div>`}
+  </div>
+  <div class="section"><h2>Notes</h2><textarea id="notes" placeholder="Video time you stopped at, yarn colour, hook you used…">${esc(x.notes||'')}</textarea></div>
+  <div class="section"><h2>Photos</h2><p class="fine">Add progress or finished photos. They stay on this phone.</p><div class="photos" id="photos"></div></div>
+  <div class="actions">
+    <button class="btn ${x.done?'secondary':'primary'}" data-done="${id}">${x.done?'Mark as not finished':'Mark as finished'}</button>
+    <button class="btn secondary" data-open="${id}">See pattern details</button>
+  </div>`;
+}
+
+/* ---------- My projects ---------- */
+let pseg = 'now';
+function vProjects(){
+  const all = Object.entries(projects);
+  const now = all.filter(([,x])=>!x.done), done = all.filter(([,x])=>x.done);
+  const body = pseg==='now'
+    ? (now.length?`<div class="plist">${now.map(([id,x])=>pItem(PM[id],x)).join('')}</div>`:`<div class="empty">Nothing on the hook yet. Open a pattern and tap <b>Start this project</b>.</div>`)
+    : (done.length?`<div class="plist">${done.map(([id,x])=>pItem(PM[id],x)).join('')}</div>`:`<div class="empty">Finished projects and their photos show up here.</div>`);
+  return `${backBtn()}<div class="section"><h1>My projects</h1></div>${seg('p',pseg,[['now','Making'],['done','Made']])}${body}`;
+}
+
+/* ---------- Stitch videos + reading guide ---------- */
+const TERMS = [
+  ['sl st','Slip stitch','Joins rounds or moves along without adding height.'],
+  ['st / sts','Stitch / stitches',''],
+  ['tr','Treble crochet (US)','Taller than a double crochet. UK calls it dtr.'],
+  ['inc','Increase','Two stitches in the same stitch. Makes the piece wider.'],
+  ['dec','Decrease','Joins two stitches into one. Makes the piece narrower.'],
+  ['BLO / FLO','Back / front loop only','Work into just one of the two top loops. Gives a ribbed look.'],
+  ['sk','Skip','Miss a stitch and go to the next one.'],
+  ['sp / ch-sp','Space / chain space','The gap under a chain. You work into the gap, not the chain.'],
+  ['rep','Repeat',''],
+  ['RS / WS','Right side / wrong side','The front and back of your work.'],
+  ['fsc','Foundation single crochet','Makes the chain and first row at the same time.'],
+  ['FPdc / BPdc','Front / back post double crochet','Worked around the stitch post. Used for ribbing.']
+];
+const DECODE = [
+  ['Row 3:','This is the third row. The number at the end tells you how many stitches you should have when the row is done.'],
+  ['Ch 1,','Chain 1. This lifts your yarn to the height of a single crochet. In most patterns it does not count as a stitch. The pattern notes will say.'],
+  ['sc in first st,','Single crochet into the first stitch.'],
+  ['*','A star marks the start of a repeat. Remember where it is.'],
+  ['2 sc in next st,','Two single crochets in the same stitch. This is an increase.'],
+  ['sc in next 2 sts;','One single crochet in each of the next 2 stitches.'],
+  ['rep from * across,','Go back to the star and do that part again, until you reach the end of the row.'],
+  ['turn.','Turn your work over so you can start the next row.'],
+  ['(21 sts)','You should now have 21 stitches. Count them. If Row 2 had 16 stitches, that is 1 + 5 repeats of 4 = 21.']
+];
+let dSel = 0;
+function lesson(n,title,html){ return `<details><summary><span class="n">${n}</span>${title}</summary><div class="in">${html}</div></details>`; }
+function vStitches(){
+  return `${backBtn()}<div class="section"><h1>Stitch videos</h1><p class="lead">Start here if you're new. Each video opens on YouTube.</p></div>
+  <div class="vlist">${STITCHES.map(s=>vcard(s.vid,{label:s.name+' ('+s.ab+')'})).join('')}</div>
+  <div class="section"><h2>US and UK names</h2><div class="tbl"><table><thead><tr><th>Stitch</th><th>US</th><th>UK</th></tr></thead><tbody>${STITCHES.filter(s=>s.ab!=='MR').map(s=>`<tr><td>${s.name}</td><td><b>${s.ab}</b></td><td><b>${s.uk}</b></td></tr>`).join('')}</tbody></table></div></div>
+  <div class="section"><h2>Other words you'll see</h2>
+  <div class="tbl"><table><thead><tr><th>Short</th><th>Means</th></tr></thead><tbody>${TERMS.map(t=>`<tr><td><b>${t[0]}</b></td><td>${t[1]}${t[2]?`<br><span class="fine">${t[2]}</span>`:''}</td></tr>`).join('')}</tbody></table></div></div>`;
+}
+function vRead(){
+  return `${backBtn()}<div class="section"><h1>Read a pattern</h1></div>
+  <div class="section"><h2>Read a line, piece by piece</h2>
+    <div class="decode"><p class="fine">Tap each part of this example line.</p>
+    <div class="line">${DECODE.map((d,i)=>`<button data-dec="${i}" aria-pressed="${dSel===i}">${esc(d[0])}</button>`).join('')}</div>
+    <div class="explain" aria-live="polite"><b>${esc(DECODE[dSel][0])}</b><br>${esc(DECODE[dSel][1])}</div></div></div>
+  <div class="section"><h2>The basics</h2><div class="lessons">
+  ${lesson(1,'Check what you need first',`<p>Every pattern starts with the yarn, hook size and other tools. Use the same yarn weight and hook size so your piece comes out the right size.</p><p>Yarn weight is a number from 0 (thinnest) to 7 (thickest). For example, DK is 3, worsted is 4 and super bulky is 6.</p>`)}
+  ${lesson(2,'US or UK terms?',`<p>The same stitch has different names in the US and UK. The pattern notes say which one it uses.</p><div class="tbl"><table><thead><tr><th>US</th><th>UK</th></tr></thead><tbody><tr><td>slip stitch (sl st)</td><td>slip stitch (ss)</td></tr><tr><td>single crochet (sc)</td><td>double crochet (dc)</td></tr><tr><td>half double crochet (hdc)</td><td>half treble (htr)</td></tr><tr><td>double crochet (dc)</td><td>treble (tr)</td></tr><tr><td>treble (tr)</td><td>double treble (dtr)</td></tr></tbody></table></div><p class="fine">Watch out: "dc" means a different stitch in each. Check the terms before you start.</p>`)}
+  ${lesson(3,'Rows and rounds',`<p><b>Row</b>: you work back and forth, turning at the end. Used for flat pieces like a bag panel.</p><p><b>Round (Rnd)</b>: you work in a circle without turning. Used for hats, coasters and toys.</p>`)}
+  ${lesson(4,'Symbols that mean "repeat"',`<p><span class="mono">* … *</span> or <span class="mono">* … ; rep from *</span>: repeat the part after the star.</p><p><span class="mono">( … )</span>: do everything inside the brackets in the same stitch, for example <span class="mono">(sc, ch 2, sc) in next st</span>.</p><p><span class="mono">[ … ] 3 times</span>: repeat what's inside the square brackets 3 times.</p>`)}
+  ${lesson(5,'Stitch counts',`<p>A number at the end of a row, like <span class="mono">(21)</span> or <span class="mono">&lt;21 sts&gt;</span>, is how many stitches you should have. Count them. If the number is wrong, fix it now. It's much harder later.</p>`)}
+  ${lesson(6,'Sizes in brackets',`<p>Clothing patterns write every size at once: <span class="mono">Ch 63 (69, 75, 81)</span>. The first number is the smallest size. The numbers in brackets are the next sizes, in order. Circle your size's numbers before you start.</p>`)}
+  ${lesson(7,'Gauge',`<p>Gauge is how many stitches and rows fit in 10 cm. Make a small test square first. Too many stitches? Use a bigger hook. Too few? Use a smaller hook. For bags and toys, gauge matters less. For clothes, it decides whether it fits.</p>`)}
+  </div></div>`;
+}
+
+/* ---------- Favourites ---------- */
+let fseg = 'patterns';
+function vFavs(){
+  const body = fseg==='patterns'
+    ? (favP.length?`<div class="grid">${favP.map(id=>card(PM[id])).join('')}</div>`:`<div class="empty">Tap <b>Favourite</b> on any pattern to keep it here.<button class="btn ghost" data-tab="patterns">Find patterns</button></div>`)
+    : (favV.length?`<div class="vlist">${favV.map(id=>vcard(id)).join('')}</div>`:`<div class="empty">Tap <b>Add to favourites</b> under any video to keep it here.<button class="btn ghost" data-tab="patterns">Find videos</button></div>`);
+  return `<div class="section"><h1>Favourites</h1></div>${seg('f',fseg,[['patterns','Patterns ('+favP.length+')'],['videos','Videos ('+favV.length+')']])}${body}`;
+}
+
+/* ---------- Must make ---------- */
+function vMust(){
+  const items = Object.entries(must).sort((a,b)=>{ const x=a[1].date||'9999', y=b[1].date||'9999'; return x.localeCompare(y) || a[1].added-b[1].added; });
+  return `<div class="section"><h1>Must make</h1><p class="lead">Things you want to make next. Pick a date and a reminder shows on Home when it's close.</p></div>
+  ${items.length?`<div class="mlist">${items.map(([id,m])=>{ const p=PM[id], started=projects[id]; return `<div class="mitem">
+      <button class="headr" data-open="${id}">${miniBox(p)}<span><b>${esc(p.name)}</b><span class="sub">${esc(p.by)} · ${CAT[p.cat].name}</span></span></button>
+      ${dateBox(id,m)}
+      <div class="pair"><button class="btn primary" data-start="${id}">${started?'Continue':'Start it'}</button><button class="btn secondary" data-unmust="${id}">Remove</button></div>
+    </div>`; }).join('')}</div>`
+  :`<div class="empty">Nothing here yet. Open a pattern and tap <b>Must make</b>.<button class="btn ghost" data-tab="patterns">Find patterns</button></div>`}
+  <p class="fine">Reminders appear inside this app. It can't send notifications to your phone.</p>`;
+}
+
+/* ---------- render ---------- */
+const TABS = [['home','Home','tHome'],['patterns','Patterns','tPat'],['favs','Favourites','tFav'],['must','Must make','tMust']];
+function render(){
+  const c = cur(), app = document.getElementById('app');
+  const V = {home:vHome,patterns:vPatterns,favs:vFavs,must:vMust,projects:vProjects,pattern:vPattern,make:vMake,stitches:vStitches,read:vRead};
+  app.innerHTML = V[c.v](c.arg);
+  const nDue = dueSoon().filter(([,m])=>daysUntil(m.date)<=0).length;
+  document.getElementById('tabs').innerHTML = TABS.map(([k,l,ic])=>`<button data-tab="${k}" ${tab===k?'aria-current="page"':''} style="position:relative">${I[ic]}${l}${k==='must'&&nDue?`<span style="position:absolute;top:6px;left:calc(50% + 6px);background:var(--mustard);color:var(--bg);border-radius:999px;font-size:11px;min-width:18px;height:18px;display:grid;place-items:center;padding:0 4px">${nDue}</span>`:''}</button>`).join('');
+  if(c.v==='make') afterMake(c.arg);
+  if(c.v==='home'||c.v==='projects') fillThumbs();
+  const q=document.getElementById('q'); if(q){ q.oninput=e=>{ bf.q=e.target.value; const pos=e.target.selectionStart; render(); const n=document.getElementById('q'); n.focus(); n.setSelectionRange(pos,pos); }; }
+  document.querySelectorAll('[data-date]').forEach(inp=>inp.onchange=()=>{ must[inp.dataset.date].date=inp.value; saveAll(); toast(inp.value?'Reminder set for '+niceDate(inp.value):'Reminder cleared'); render(); });
+}
+async function fillThumbs(){
+  for(const el of document.querySelectorAll('[data-thumb]')){
+    const ph = await getPhotos(el.dataset.thumb);
+    if(ph.length) el.innerHTML = `<img src="${ph[ph.length-1]}" alt="">`;
+  }
+}
+let wake=null;
+async function afterMake(id){
+  const ta=document.getElementById('notes'); if(!ta) return;
+  ta.oninput=()=>{ projects[id].notes=ta.value; saveAll(); };
+  const box=document.getElementById('photos');
+  const ph = await getPhotos(id);
+  box.innerHTML = ph.map((src,i)=>`<figure><img src="${src}" alt="Project photo ${i+1}"><button class="del" data-delph="${i}" aria-label="Remove photo">×</button></figure>`).join('') +
+    `<label class="addphoto">+ Add photo<input type="file" accept="image/*" id="addph"></label>`;
+  document.getElementById('addph').onchange = async e=>{
+    const f=e.target.files[0]; if(!f) return;
+    try{ const d=await shrink(f); const arr=await getPhotos(id); arr.push(d); await setPhotos(id,arr); toast('Photo added'); afterMake(id);}catch(err){ toast("That photo couldn't be added. Try another.") }
+  };
+  try{ if('wakeLock' in navigator && !wake){ wake = await navigator.wakeLock.request('screen'); wake.addEventListener('release',()=>wake=null);} }catch(e){}
+}
+
+document.addEventListener('click', async e=>{
+  const t = e.target.closest('button,[data-open]'); if(!t) return; if(t.tagName==='A') return;
+  const d = t.dataset;
+  if(d.act==='back') return back();
+  if(d.tab) return switchTab(d.tab);
+  if(d.tabgo){ const [tb,sub]=d.tabgo.split(':'); return switchTab(tb,sub); }
+  if(d.go){ const [v,s]=d.go.split(':'); if(v==='projects'&&s) pseg=s; return go(v); }
+  if(d.pick){ bf.cats = bf.cats.includes(d.pick)?bf.cats.filter(x=>x!==d.pick):[...bf.cats,d.pick]; return render(); }
+  if(d.lvl){ bf.lvl=d.lvl; return render(); }
+  if(d.clear!==undefined){ bf={cats:[],lvl:'all',vid:false,q:'',type:'all'}; return render(); }
+  if(d.type){ bf.type=d.type; return render(); }
+  if(d.favv){ const id=d.favv; if(favV.includes(id)){favV=favV.filter(x=>x!==id);toast('Removed from favourites')}else{favV.push(id);toast('Added to favourites')} saveAll(); return render(); }
+  if(d.open) return go('pattern',d.open);
+  if(d.make){ confirmReset=false; if(projects[d.make]){projects[d.make].last=Date.now();saveAll();} return go('make',d.make); }
+  if(d.bt){ bf[d.bt]=!bf[d.bt]; return render(); }
+  if(d.seg){ const [n,k]=d.seg.split(':'); if(n==='p')pseg=k; if(n==='f')fseg=k; return render(); }
+  if(d.dec!==undefined){ dSel=+d.dec; return render(); }
+  if(d.favp){ const id=d.favp; if(favP.includes(id)){favP=favP.filter(x=>x!==id);toast('Removed from favourites')}else{favP.push(id);toast('Added to favourites')} saveAll(); return render(); }
+  if(d.must){ const id=d.must; if(must[id]){delete must[id];toast('Removed from Must make')}else{must[id]={date:'',added:Date.now()};toast('Added to Must make. Pick a date below.')} saveAll(); return render(); }
+  if(d.unmust){ delete must[d.unmust]; saveAll(); toast('Removed from Must make'); return render(); }
+  if(d.cleardate){ must[d.cleardate].date=''; saveAll(); toast('Reminder cleared'); return render(); }
+  if(d.start){ const id=d.start; if(!projects[id]){ projects[id]={row:0,unit:'Row',notes:'',started:Date.now(),last:Date.now(),done:false}; toast('Added to My projects'); } else projects[id].last=Date.now(); if(must[id]) delete must[id]; saveAll(); confirmReset=false; return go('make',id); }
+  const id = cur().arg;
+  if(d.inc){ const x=projects[id]; x.row=Math.max(0,(x.row||0)+(+d.inc)); x.last=Date.now(); saveAll(); confirmReset=false; return render(); }
+  if(d.unit){ projects[id].unit=d.unit; saveAll(); return render(); }
+  if(d.reset){ if(d.reset==='ask') confirmReset=true; else { if(d.reset==='yes'){projects[id].row=0; saveAll();} confirmReset=false; } return render(); }
+  if(d.done){ projects[d.done].done=!projects[d.done].done; saveAll(); toast(projects[d.done].done?'Marked as finished':'Moved back to Making'); return render(); }
+  if(d.delph!==undefined){ const arr=await getPhotos(id); arr.splice(+d.delph,1); await setPhotos(id,arr); return afterMake(id); }
+});
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'){ wake=null; render(); } });
+
+/* ---------- PWA: pictures from the web ---------- */
+const ytThumb = id => 'https://i.ytimg.com/vi/'+id+'/mqdefault.jpg';
+function pImg(p){ if(!p) return null; if(p.video) return ytThumb(p.video); return p.img || (typeof IMGSRC!=='undefined'&&IMGSRC[p.id]) || null; }
+function vImg(id){ return ytThumb(id); }
+document.addEventListener('error', e=>{ const t=e.target; if(t&&t.tagName==='IMG') t.remove(); }, true);
+
+/* ---------- PWA: in-app viewer for videos and patterns ---------- */
+const viewer = document.createElement('div');
+viewer.className='viewer'; viewer.hidden=true;
+viewer.innerHTML='<div class="vbar"><button class="vback" data-vclose="1" aria-label="Back">'+I.back+'<span>Back</span></button><b class="vtitle"></b><a class="vext" target="_blank" rel="noopener">Open in browser</a></div><div class="vbody"></div>';
+document.body.appendChild(viewer);
+function openViewer(url,title){
+  const m = url.match(/youtube\.com\/watch\?v=([\w-]{11})/);
+  const body = viewer.querySelector('.vbody');
+  viewer.querySelector('.vtitle').textContent = title||'';
+  viewer.querySelector('.vext').href = url;
+  if(m){ body.className='vbody vvid'; body.innerHTML='<div class="vframe"><iframe src="https://www.youtube-nocookie.com/embed/'+m[1]+'?playsinline=1&rel=0&modestbranding=1" title="Video" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div><p class="fine">Tip: turn your phone sideways for a bigger picture.</p>'; }
+  else { body.className='vbody vpage'; body.innerHTML='<iframe src="'+url+'" title="Pattern"></iframe>'; }
+  viewer.hidden=false; document.body.style.overflow='hidden';
+  history.pushState({viewer:1},'');
+}
+function closeViewer(){ viewer.hidden=true; viewer.querySelector('.vbody').innerHTML=''; document.body.style.overflow=''; }
+window.addEventListener('popstate',()=>{ if(!viewer.hidden) closeViewer(); });
+document.addEventListener('click', e=>{
+  if(e.target.closest('[data-vclose]')){ e.preventDefault(); history.back(); return; }
+  const a = e.target.closest('a[target="_blank"]');
+  if(!a || a.classList.contains('vext')) return;
+  e.preventDefault(); e.stopPropagation();
+  const t = (a.querySelector('b')||{}).textContent || (document.querySelector('.app h1')||{}).textContent || '';
+  openViewer(a.href, t);
+}, true);
+
+/* ---------- PWA: offline + install ---------- */
+if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+
+render();
+</script>
