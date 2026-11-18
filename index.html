@@ -387,6 +387,7 @@ input[type=date]{min-height:46px;border:2px solid var(--line);border-radius:12px
 .wbar i{display:block;height:100%;background:var(--accent);border-radius:999px}
 .bwatch .btn svg{width:18px;height:18px}
 
+.appver{text-align:center;margin:8px 0 0}
 </style>
 
 <div class="app" id="app"></div>
@@ -740,6 +741,7 @@ function vHome(){
   html += `</div>`;
 
   if(making.length>1) html += `<div class="section"><div class="row-between"><h2>Also on the hook</h2><button class="link-btn" data-go="projects:now">See all</button></div><div class="plist">${making.slice(1,4).map(([id,x])=>pItem(PM[id],x)).join('')}</div></div>`;
+  html += `<p class="fine appver">App version 9 Oct 2026 (a)</p>`;
   return html;
 }
 
