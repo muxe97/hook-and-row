@@ -388,6 +388,8 @@ input[type=date]{min-height:46px;border:2px solid var(--line);border-radius:12px
 .bwatch .btn svg{width:18px;height:18px}
 
 .appver{text-align:center;margin:8px 0 0}
+.ytblock{display:flex;flex-direction:column;gap:10px}
+.ytblock .btn svg{width:18px;height:18px}
 </style>
 
 <div class="app" id="app"></div>
@@ -625,7 +627,8 @@ let favP = store.get('favP', store.get('saved',[]));
 let favV = store.get('favV',[]);
 let must = store.get('must',{});
 let projects = store.get('projects',{}); // id -> {row, unit, notes, started, done, last}
-const saveAll = ()=>{store.set('favP',favP);store.set('favV',favV);store.set('must',must);store.set('projects',projects)};
+const saveAll = ()=>{store.set('favP',favP);store.set('favV',favV);store.set('must',must);store.set('projects',projects);store.set('ytvids',Object.fromEntries(favV.filter(id=>VIDS[id]&&VIDS[id].kind==='yt').map(id=>[id,VIDS[id]])))};
+const ytSaved = store.get('ytvids',{}); Object.entries(ytSaved).forEach(([id,v])=>{ if(!VIDS[id]) VIDS[id]=v; });
 favP = favP.filter(id=>PM[id]); favV = favV.filter(id=>VIDS[id]);
 Object.keys(must).forEach(id=>{ if(!PM[id]) delete must[id]; });
 Object.keys(projects).forEach(id=>{ if(!PM[id]) delete projects[id]; });
@@ -754,6 +757,47 @@ function filtered(){
     &&(!bf.vid||p.video)&&(bf.type==='all'||(bf.type==='video'?isVid(p):!isVid(p)))
     &&(!q||(p.name+' '+p.by+' '+CAT[p.cat].name).toLowerCase().includes(q)));
 }
+/* ---------- YouTube search ---------- */
+const YT_KEY = 'AIzaSyB7AT_pXwH_5T1GkH7_-xUGDMM9DWiCyes';   // YouTube Data API key (restricted to muxe97.github.io)
+const ytCache = {};  // query -> {items|error}
+let ytBusy = '', ytMore = false;
+const unesc = t => { const x=document.createElement('textarea'); x.innerHTML=t; return x.value; };
+async function ytSearch(q){
+  q=q.trim(); if(!q||!YT_KEY) return;
+  if(ytCache[q]){ render(); return; }
+  ytBusy=q; ytMore=false; render();
+  const query = /crochet/i.test(q) ? q : 'crochet '+q;
+  try{
+    const r = await fetch('https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoEmbeddable=true&safeSearch=moderate&maxResults=12&q='+encodeURIComponent(query)+'&key='+YT_KEY);
+    const j = await r.json();
+    if(!r.ok){ const why=(j.error&&j.error.errors&&j.error.errors[0]&&j.error.errors[0].reason)||''; ytCache[q]={error: /quota/i.test(why)?'quota':'fail'}; }
+    else {
+      const items=(j.items||[]).map(it=>({id:it.id.videoId, title:unesc(it.snippet.title), by:unesc(it.snippet.channelTitle)})).filter(v=>v.id);
+      items.forEach(v=>{ if(!VIDS[v.id]) VIDS[v.id]={id:v.id,title:v.title,by:v.by,kind:'yt'}; });
+      ytCache[q]={items:items.map(v=>v.id)};
+    }
+  }catch(e){ ytCache[q]={error:'offline'}; }
+  ytBusy=''; render();
+}
+function ytBlock(){
+  const q=bf.q.trim(); if(!YT_KEY||q.length<2) return '';
+  const head=`<div class="row-between"><h2>On YouTube</h2></div>`;
+  if(ytBusy===q) return `<div class="section ytblock">${head}<p class="fine" role="status">Searching YouTube…</p></div>`;
+  const res=ytCache[q];
+  if(!res) return `<div class="section ytblock">${head}<button class="btn secondary" data-ytsearch="1">${I.play}Search YouTube for “${esc(q)}”</button></div>`;
+  if(res.error){ const msg={quota:'The YouTube search limit for today has been reached. It resets tomorrow. The app’s own patterns and videos below still work.',offline:'Couldn’t reach YouTube. Check the internet connection and try again.',fail:'YouTube search didn’t work this time. Try again.'}[res.error];
+    return `<div class="section ytblock">${head}<p class="note">${msg}</p>${res.error!=='quota'?`<button class="btn secondary" data-ytretry="1">Try again</button>`:''}</div>`; }
+  if(!res.items.length) return `<div class="section ytblock">${head}<p class="fine">No YouTube videos found for “${esc(q)}”.</p></div>`;
+  const show = ytMore ? res.items : res.items.slice(0,4);
+  return `<div class="section ytblock">${head}<p class="fine">${res.items.length} videos from YouTube. They play here in the app.</p><div class="vlist">${show.map(id=>vcard(id)).join('')}</div>${!ytMore&&res.items.length>4?`<button class="btn ghost" data-ytmore="1">Show ${res.items.length-4} more</button>`:''}</div>`;
+}
+document.addEventListener('click',e=>{
+  if(e.target.closest('[data-ytsearch]')){ e.preventDefault(); ytSearch(bf.q); }
+  else if(e.target.closest('[data-ytretry]')){ e.preventDefault(); delete ytCache[bf.q.trim()]; ytSearch(bf.q); }
+  else if(e.target.closest('[data-ytmore]')){ e.preventDefault(); ytMore=true; render(); }
+});
+document.addEventListener('keydown',e=>{ if(e.key==='Enter' && e.target && e.target.id==='q'){ e.preventDefault(); e.target.blur(); ytSearch(bf.q); } });
+
 function vPatterns(){
   const list = filtered();
   const lv = [['all','All levels'],...LEVELS.map(l=>[l,l]),['none','Level not given']];
@@ -762,7 +806,7 @@ function vPatterns(){
     <button class="learnbtn" data-go="stitches">${I.play}<b>Stitch videos</b><span class="fine">Chain, magic ring and more</span></button>
     <button class="learnbtn" data-go="read">${I.book}<b>Read a pattern</b><span class="fine">Step by step</span></button>
   </div></div>
-  <input type="search" id="q" placeholder="Search patterns" value="${esc(bf.q)}" aria-label="Search patterns">
+  <input type="search" id="q" placeholder="Search patterns and YouTube" value="${esc(bf.q)}" aria-label="Search patterns and YouTube" enterkeyhint="search">${ytBlock()}
   <div class="section"><h2>What do you want to make?</h2><p class="fine">Tap one or more. Tap again to remove.</p>
   <div class="cats">${CATS.map(c=>{ const n=P.filter(p=>p.cat===c.id).length; return `<button class="cat" aria-pressed="${bf.cats.includes(c.id)}" data-pick="${c.id}">${I[c.id]}<span><b>${c.name}</b><small>${n} patterns</small></span></button>`;}).join('')}</div></div>
   <div class="filters"><span class="flabel">Show</span>
