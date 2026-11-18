@@ -747,7 +747,7 @@ function vHome(){
 
   if(making.length>1) html += `<div class="section"><div class="row-between"><h2>Also on the hook</h2><button class="link-btn" data-go="projects:now">See all</button></div><div class="plist">${making.slice(1,4).map(([id,x])=>pItem(PM[id],x)).join('')}</div></div>`;
   html += `<button class="bt wide bbackup" data-go="backup"><b>Back up your saves</b><span class="fine">${lastBackupText()}</span></button>`;
-  html += `<p class="fine appver">App version 18 Nov 2026 (a)</p>`;
+  html += `<p class="fine appver">App version 18 Nov 2026 (b)</p>`;
   return html;
 }
 
@@ -828,11 +828,14 @@ function ytRemember(q,items){ ytSavedRes[q.toLowerCase()]={at:Date.now(),items};
   store.set('ytcache',ytSavedRes); }
 let ytBusy = '', ytMore = false;
 const unesc = t => { const x=document.createElement('textarea'); x.innerHTML=t; return x.value; };
+function renderKeep(){ const a=document.activeElement, f=a&&a.id==='q', pos=f?a.selectionStart:0; render(); if(f){ const n=document.getElementById('q'); if(n){ n.focus(); try{n.setSelectionRange(pos,pos);}catch(e){} } } }
+let ytTimer=null;
+function ytAuto(){ clearTimeout(ytTimer); const q=bf.q.trim(); if(!YT_KEY||q.length<3) return; ytTimer=setTimeout(()=>{ if(bf.q.trim()===q) ytSearch(q); }, 1000); }
 async function ytSearch(q){
   q=q.trim(); if(!q||!YT_KEY) return;
-  const key=q.toLowerCase(); if(ytCache[key]&&!ytCache[key].error){ ytCache[q]=ytCache[key]; render(); return; }
-  if(ytCache[q]){ render(); return; }
-  ytBusy=q; ytMore=false; render();
+  const key=q.toLowerCase(); if(ytCache[key]&&!ytCache[key].error){ ytCache[q]=ytCache[key]; renderKeep(); return; }
+  if(ytCache[q]){ renderKeep(); return; }
+  ytBusy=q; ytMore=false; renderKeep();
   const query = /crochet/i.test(q) ? q : 'crochet '+q;
   try{
     const r = await fetch('https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoEmbeddable=true&safeSearch=moderate&maxResults=12&q='+encodeURIComponent(query)+'&key='+YT_KEY);
@@ -844,19 +847,19 @@ async function ytSearch(q){
       ytCache[q]={items:items.map(v=>v.id)}; ytCache[q.toLowerCase()]=ytCache[q]; ytRemember(q,items);
     }
   }catch(e){ ytCache[q]={error:'offline'}; }
-  ytBusy=''; render();
+  ytBusy=''; renderKeep();
 }
 function ytBlock(){
   const q=bf.q.trim(); if(!YT_KEY||q.length<2) return '';
   const head=`<div class="row-between"><h2>On YouTube</h2></div>`;
   if(ytBusy===q) return `<div class="section ytblock">${head}<p class="fine" role="status">Searching YouTube…</p></div>`;
   const res=ytCache[q]||ytCache[q.toLowerCase()];
-  if(!res) return `<div class="section ytblock">${head}<button class="btn secondary" data-ytsearch="1">${I.play}Search YouTube for “${esc(q)}”</button></div>`;
+  if(!res) return q.length<3 ? '' : `<div class="section ytblock">${head}<p class="fine" role="status">Searching YouTube…</p></div>`;
   if(res.error){ const msg={quota:'The YouTube search limit for today has been reached. It resets tomorrow. The app’s own patterns and videos below still work.',offline:'Couldn’t reach YouTube. Check the internet connection and try again.',fail:'YouTube search didn’t work this time. Try again.'}[res.error];
     return `<div class="section ytblock">${head}<p class="note">${msg}</p>${res.error!=='quota'?`<button class="btn secondary" data-ytretry="1">Try again</button>`:''}</div>`; }
   if(!res.items.length) return `<div class="section ytblock">${head}<p class="fine">No YouTube videos found for “${esc(q)}”.</p></div>`;
   const show = ytMore ? res.items : res.items.slice(0,4);
-  return `<div class="section ytblock">${head}<p class="fine">${res.items.length} videos from YouTube. They play here in the app.</p><div class="vlist">${show.map(id=>vcard(id)).join('')}</div>${!ytMore&&res.items.length>4?`<button class="btn ghost" data-ytmore="1">Show ${res.items.length-4} more</button>`:''}</div>`;
+  return `<div class="section ytblock">${head}<p class="fine">${res.items.length} video${res.items.length===1?'':'s'} from YouTube. They play here in the app.</p><div class="vlist">${show.map(id=>vcard(id)).join('')}</div>${!ytMore&&res.items.length>4?`<button class="btn ghost" data-ytmore="1">Show ${res.items.length-4} more</button>`:''}</div>`;
 }
 document.addEventListener('click',e=>{
   if(e.target.closest('[data-ytsearch]')){ e.preventDefault(); ytSearch(bf.q); }
@@ -1038,7 +1041,7 @@ function render(){
   document.getElementById('tabs').innerHTML = TABS.map(([k,l,ic])=>`<button data-tab="${k}" ${tab===k?'aria-current="page"':''} style="position:relative">${I[ic]}${l}${k==='must'&&nDue?`<span style="position:absolute;top:6px;left:calc(50% + 6px);background:var(--mustard);color:var(--bg);border-radius:999px;font-size:11px;min-width:18px;height:18px;display:grid;place-items:center;padding:0 4px">${nDue}</span>`:''}</button>`).join('');
   if(c.v==='make') afterMake(c.arg);
   if(c.v==='home'||c.v==='projects') fillThumbs();
-  const q=document.getElementById('q'); if(q){ q.oninput=e=>{ bf.q=e.target.value; const pos=e.target.selectionStart; render(); const n=document.getElementById('q'); n.focus(); n.setSelectionRange(pos,pos); }; }
+  const q=document.getElementById('q'); if(q){ q.oninput=e=>{ bf.q=e.target.value; ytAuto(); const pos=e.target.selectionStart; render(); const n=document.getElementById('q'); n.focus(); n.setSelectionRange(pos,pos); }; }
   document.querySelectorAll('[data-date]').forEach(inp=>inp.onchange=()=>{ must[inp.dataset.date].date=inp.value; saveAll(); toast(inp.value?'Reminder set for '+niceDate(inp.value):'Reminder cleared'); render(); });
 }
 async function fillThumbs(){
