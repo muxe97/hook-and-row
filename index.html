@@ -388,6 +388,8 @@ input[type=date]{min-height:46px;border:2px solid var(--line);border-radius:12px
 .bwatch .btn svg{width:18px;height:18px}
 
 .appver{text-align:center;margin:8px 0 0}
+.bbackup{min-height:0;margin-top:10px}
+.bbackup b{font-size:16px}
 .ytblock{display:flex;flex-direction:column;gap:10px}
 .ytblock .btn svg{width:18px;height:18px}
 </style>
@@ -744,7 +746,8 @@ function vHome(){
   html += `</div>`;
 
   if(making.length>1) html += `<div class="section"><div class="row-between"><h2>Also on the hook</h2><button class="link-btn" data-go="projects:now">See all</button></div><div class="plist">${making.slice(1,4).map(([id,x])=>pItem(PM[id],x)).join('')}</div></div>`;
-  html += `<p class="fine appver">App version 9 Oct 2026 (a)</p>`;
+  html += `<button class="bt wide bbackup" data-go="backup"><b>Back up your saves</b><span class="fine">${lastBackupText()}</span></button>`;
+  html += `<p class="fine appver">App version 18 Nov 2026 (a)</p>`;
   return html;
 }
 
@@ -757,13 +760,77 @@ function filtered(){
     &&(!bf.vid||p.video)&&(bf.type==='all'||(bf.type==='video'?isVid(p):!isVid(p)))
     &&(!q||(p.name+' '+p.by+' '+CAT[p.cat].name).toLowerCase().includes(q)));
 }
+
+/* ---------- Back up / Restore (one file with everything saved on this phone) ---------- */
+function lastBackupText(){ const t=store.get('lastbackup',0); if(!t) return 'Not backed up yet. Saves are kept on this phone only.'; const d=Math.floor((Date.now()-t)/864e5); return 'Last backup: '+(d<1?'today':d===1?'yesterday':d+' days ago')+'.'; }
+let restoreFile=null, restoreInfo=null;
+function vBackup(){
+  const nP=favP.length, nV=favV.length, nM=Object.keys(must).length, nJ=Object.keys(projects).length;
+  return `${backBtn()}<div class="section"><h1>Back up your saves</h1>
+  <p class="lead">Everything you save is kept on this phone only. A backup file lets you get it back if the phone is reset, Safari's data is cleared, or you move to a new phone.</p></div>
+  <div class="section"><h2>What's saved now</h2><p class="fine">${nP} favourite pattern${nP===1?'':'s'}, ${nV} favourite video${nV===1?'':'s'}, ${nM} on Must make, ${nJ} project${nJ===1?'':'s'} (with row counts, notes and photos), your theme and where you stopped in videos.</p>
+  <button class="btn primary" data-bkup="save">Save a backup file</button>
+  <p class="fine">On iPhone choose <b>Save to Files</b>. On Android it goes to Downloads. ${lastBackupText()}</p></div>
+  <div class="section"><h2>Restore from a backup</h2>
+  <p class="fine">This replaces what's saved on this phone with what's in the backup file.</p>
+  ${restoreInfo?`<div class="note"><b>${esc(restoreInfo.name)}</b><br>Made ${esc(restoreInfo.when)}. ${restoreInfo.sum}</div>
+    <div class="pair"><button class="btn primary" data-bkup="confirm">Restore</button><button class="btn secondary" data-bkup="cancel">Cancel</button></div>`
+  :`<label class="btn secondary" style="position:relative">Choose backup file<input type="file" id="restorefile" accept=".json,application/json" style="position:absolute;inset:0;opacity:0;width:100%;cursor:pointer"></label>`}
+  </div>`;
+}
+async function makeBackup(){
+  const data={app:'hook-and-row',v:1,made:Date.now(),local:{},photos:{}};
+  for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&k.startsWith('hr:')&&k!=='hr:ytcache') data.local[k]=localStorage.getItem(k); }
+  for(const id of Object.keys(projects)){ const ph=await getPhotos(id); if(ph&&ph.length) data.photos[id]=ph; }
+  const d=new Date(), stamp=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const name='hook-and-row-backup-'+stamp+'.json';
+  const blob=new Blob([JSON.stringify(data)],{type:'application/json'});
+  const file=new File([blob],name,{type:'application/json'});
+  let done=false;
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file],title:'Hook & Row backup'}); done=true; }catch(e){ if(e&&e.name==='AbortError') return; }
+  }
+  if(!done){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000); }
+  store.set('lastbackup',Date.now()); toast('Backup saved'); render();
+}
+async function readBackup(f){
+  try{
+    const data=JSON.parse(await f.text());
+    if(data.app!=='hook-and-row'||!data.local) throw 0;
+    const g=k=>{ try{ return JSON.parse(data.local['hr:'+k]||'null'); }catch(e){ return null; } };
+    const n=x=>Array.isArray(x)?x.length:x?Object.keys(x).length:0;
+    restoreFile=data;
+    restoreInfo={name:f.name, when:new Date(data.made).toLocaleDateString(undefined,{day:'numeric',month:'long',year:'numeric'}),
+      sum:(()=>{ const pl=(c,w)=>c+' '+w+(c===1?'':'s'); return [pl(n(g('favP')),'favourite pattern'),pl(n(g('favV')),'favourite video'),n(g('must'))+' on Must make',pl(n(g('projects')),'project'),pl(Object.values(data.photos||{}).reduce((a,b)=>a+b.length,0),'photo')].join(', ')+'.'; })()};
+  }catch(e){ restoreFile=null; restoreInfo=null; toast("That isn't a Hook & Row backup file."); }
+  render();
+}
+async function applyBackup(){
+  const data=restoreFile; if(!data) return;
+  Object.keys(localStorage).filter(k=>k.startsWith('hr:')&&k!=='hr:ytcache').forEach(k=>localStorage.removeItem(k));
+  Object.entries(data.local).forEach(([k,v])=>{ try{ localStorage.setItem(k,v); }catch(e){} });
+  for(const [id,ph] of Object.entries(data.photos||{})) await setPhotos(id,ph);
+  toast('Saves restored'); setTimeout(()=>location.reload(),600);
+}
+document.addEventListener('change',e=>{ if(e.target&&e.target.id==='restorefile'&&e.target.files[0]) readBackup(e.target.files[0]); });
+document.addEventListener('click',e=>{ const b=e.target.closest('[data-bkup]'); if(!b) return; e.preventDefault();
+  const a=b.dataset.bkup; if(a==='save') makeBackup(); else if(a==='confirm') applyBackup(); else { restoreFile=null; restoreInfo=null; render(); } });
+
 /* ---------- YouTube search ---------- */
 const YT_KEY = 'AIzaSyB7AT_pXwH_5T1GkH7_-xUGDMM9DWiCyes';   // YouTube Data API key (restricted to muxe97.github.io)
 const ytCache = {};  // query -> {items|error}
+const YT_DAYS = 3;
+const ytSavedRes = (()=>{ const all=store.get('ytcache',{}), now=Date.now(), keep={};
+  Object.entries(all).forEach(([q,r])=>{ if(now-r.at < YT_DAYS*864e5){ keep[q]=r; ytCache[q]={items:r.items.map(v=>v.id)}; r.items.forEach(v=>{ if(!VIDS[v.id]) VIDS[v.id]={id:v.id,title:v.title,by:v.by,kind:'yt'}; }); } });
+  return keep; })();
+function ytRemember(q,items){ ytSavedRes[q.toLowerCase()]={at:Date.now(),items};
+  const ks=Object.keys(ytSavedRes).sort((a,b)=>ytSavedRes[b].at-ytSavedRes[a].at); ks.slice(40).forEach(k=>delete ytSavedRes[k]);
+  store.set('ytcache',ytSavedRes); }
 let ytBusy = '', ytMore = false;
 const unesc = t => { const x=document.createElement('textarea'); x.innerHTML=t; return x.value; };
 async function ytSearch(q){
   q=q.trim(); if(!q||!YT_KEY) return;
+  const key=q.toLowerCase(); if(ytCache[key]&&!ytCache[key].error){ ytCache[q]=ytCache[key]; render(); return; }
   if(ytCache[q]){ render(); return; }
   ytBusy=q; ytMore=false; render();
   const query = /crochet/i.test(q) ? q : 'crochet '+q;
@@ -774,7 +841,7 @@ async function ytSearch(q){
     else {
       const items=(j.items||[]).map(it=>({id:it.id.videoId, title:unesc(it.snippet.title), by:unesc(it.snippet.channelTitle)})).filter(v=>v.id);
       items.forEach(v=>{ if(!VIDS[v.id]) VIDS[v.id]={id:v.id,title:v.title,by:v.by,kind:'yt'}; });
-      ytCache[q]={items:items.map(v=>v.id)};
+      ytCache[q]={items:items.map(v=>v.id)}; ytCache[q.toLowerCase()]=ytCache[q]; ytRemember(q,items);
     }
   }catch(e){ ytCache[q]={error:'offline'}; }
   ytBusy=''; render();
@@ -783,7 +850,7 @@ function ytBlock(){
   const q=bf.q.trim(); if(!YT_KEY||q.length<2) return '';
   const head=`<div class="row-between"><h2>On YouTube</h2></div>`;
   if(ytBusy===q) return `<div class="section ytblock">${head}<p class="fine" role="status">Searching YouTube…</p></div>`;
-  const res=ytCache[q];
+  const res=ytCache[q]||ytCache[q.toLowerCase()];
   if(!res) return `<div class="section ytblock">${head}<button class="btn secondary" data-ytsearch="1">${I.play}Search YouTube for “${esc(q)}”</button></div>`;
   if(res.error){ const msg={quota:'The YouTube search limit for today has been reached. It resets tomorrow. The app’s own patterns and videos below still work.',offline:'Couldn’t reach YouTube. Check the internet connection and try again.',fail:'YouTube search didn’t work this time. Try again.'}[res.error];
     return `<div class="section ytblock">${head}<p class="note">${msg}</p>${res.error!=='quota'?`<button class="btn secondary" data-ytretry="1">Try again</button>`:''}</div>`; }
@@ -965,7 +1032,7 @@ function vMust(){
 const TABS = [['home','Home','tHome'],['patterns','Patterns','tPat'],['favs','Favourites','tFav'],['must','Must make','tMust']];
 function render(){
   const c = cur(), app = document.getElementById('app');
-  const V = {home:vHome,patterns:vPatterns,favs:vFavs,must:vMust,projects:vProjects,pattern:vPattern,make:vMake,stitches:vStitches,read:vRead,theme:vTheme};
+  const V = {home:vHome,patterns:vPatterns,favs:vFavs,must:vMust,projects:vProjects,pattern:vPattern,make:vMake,stitches:vStitches,read:vRead,theme:vTheme,backup:vBackup};
   app.innerHTML = V[c.v](c.arg);
   const nDue = dueSoon().filter(([,m])=>daysUntil(m.date)<=0).length;
   document.getElementById('tabs').innerHTML = TABS.map(([k,l,ic])=>`<button data-tab="${k}" ${tab===k?'aria-current="page"':''} style="position:relative">${I[ic]}${l}${k==='must'&&nDue?`<span style="position:absolute;top:6px;left:calc(50% + 6px);background:var(--mustard);color:var(--bg);border-radius:999px;font-size:11px;min-width:18px;height:18px;display:grid;place-items:center;padding:0 4px">${nDue}</span>`:''}</button>`).join('');
